@@ -1,0 +1,47 @@
+services:
+  nginx:
+    container_name: nginx
+    build:
+      context: ./backend/nginx
+      args:
+        HOST_NAME: ${HOST_NAME-localhost}
+    ports:
+      - "8443:443"
+    depends_on:
+    #  - frontend
+      - gateway
+      - users
+    networks:
+      - transcendence
+
+  users:
+    container_name: users
+    build: ./backend/micro_services/users
+    volumes:
+    - users_data:/data
+    networks:
+      - transcendence
+
+  gateway:
+    container_name: gateway
+    build: ./backend/gateway
+    volumes:
+    - gateway_data:/data
+    depends_on:
+      - users
+    networks:
+      - transcendence
+
+#  frontend:
+#    container_name: frontend
+#    build: ./frontend
+#    networks:
+#      - transcendence
+
+volumes:
+  users_data:
+  gateway_data:
+
+networks:
+  transcendence:
+    driver: bridge
