@@ -1,13 +1,18 @@
 import jwt from "jsonwebtoken";
 import db from "./db.js";
+import crypto from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
+export function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
 // token corto (login normal)
 export function generateAccessToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email },
+    { id: user.id },
     ACCESS_SECRET,
     { expiresIn: "15m" }
   );
@@ -15,9 +20,15 @@ export function generateAccessToken(user) {
 
 // token largo (renovar sesión)
 export function generateRefreshToken(user) {
-  const token = jwt.sign({ id: user.id }, REFRESH_SECRET, { expiresIn: "7d" });
-  const payload = jwt.decode(token);
-  return { token, payload };
+  const token = jwt.sign(
+    { id: user.id },
+    REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  const { exp } = jwt.verify(token, REFRESH_SECRET);
+
+  return { token, exp };
 }
 
 // Verificación
@@ -61,28 +72,6 @@ export async function findRefreshToken(token) {
           reject(err);
         else
           resolve(row);
-      }
-    );
-  });
-}
-
-export async function rotateRefreshToken(oldToken, newToken, userId, expiresAt) {
-  return new Promise((resolve, reject) => {
-    db.run(
-      "DELETE FROM refresh_tokens WHERE token = ?",
-      [oldToken],
-      function(err) {
-        if (err)
-          return reject(err);
-
-        db.run(
-          "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-          [userId, newToken, expiresAt],
-          function(err2) {
-            if (err2) reject(err2);
-            else resolve();
-          }
-        );
       }
     );
   });

@@ -1,6 +1,5 @@
 services:
   nginx:
-    container_name: nginx
     build:
       context: ./backend/nginx
       args:
@@ -15,7 +14,6 @@ services:
       - transcendence
 
   users:
-    container_name: users
     build: ./backend/micro_services/users
     volumes:
     - users_data:/data
@@ -23,7 +21,6 @@ services:
       - transcendence
 
   gateway:
-    container_name: gateway
     build: ./backend/gateway
     volumes:
     - gateway_data:/data

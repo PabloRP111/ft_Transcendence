@@ -4,7 +4,6 @@ import { hashPassword, verifyPassword } from "../utils/hash.js";
 
 const router = express.Router();
 
-
 // REGISTER
 router.post("/register", async (req, res) => {
   const { email, username, password } = req.body;

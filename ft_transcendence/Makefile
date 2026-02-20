@@ -13,18 +13,19 @@ up:
 up-no-build:
 	@echo "🚀 Levantando contenedores sin rebuild..."
 	@$(COMPOSE) up -d
-own:
+down:
 	@echo "🛑 Parando contenedores..."
 	@$(COMPOSE) down
 
-clean: down
-	@echo "🧹 Contenedores parados (clean no borra volúmenes)"
-	@echo "Use 'make fclean' para borrar también volúmenes"
-
 fclean: down
-	@echo "🧨 Borrando contenedores, imágenes y volúmenes..."
-	@docker system prune -af --volumes
-	@rm -rf ./src/backend/micro_services/users/users.db
+	@echo "🧨 Borrando volúmenes del proyecto..."
+	@docker volume rm src_gateway_data src_users_data || true
+	@echo "🧹 Borrando imágenes del proyecto..."
+	@docker-compose -f ./src/docker-compose.yml build --no-cache
+	@docker images -q | xargs -r docker rmi -f
+	@echo "🗑 Borrando bases de datos locales..."
+	@rm -f ./src/backend/micro_services/users/users.db
+	@echo "✅ Limpieza completa"
 
 logs:
 	$(COMPOSE) logs -f
