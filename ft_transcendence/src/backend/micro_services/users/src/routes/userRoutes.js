@@ -1,6 +1,7 @@
 import express from "express";
 import db from "../db.js";
-import { hashPassword, verifyPassword } from "../utils/hash.js";
+import bcrypt from "bcrypt";
+const SALT_ROUNDS = 10;
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.post("/register", async (req, res) => {
 
   try {
     // hash password
-    const hashed = await hashPassword(password);
+    const hashed = await bcrypt.hash(password, SALT_ROUNDS);
 
     db.run(
       "INSERT INTO users (email, username, password) VALUES (?, ?, ?)",
@@ -30,6 +31,7 @@ router.post("/register", async (req, res) => {
           id: this.lastID,
           email,
           username,
+          status: 200,
         });
       }
     );
@@ -38,7 +40,6 @@ router.post("/register", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 // LOGIN
 router.post("/login", async (req, res) => {
@@ -57,20 +58,25 @@ router.post("/login", async (req, res) => {
       if (!user)
         return res.status(401).json({ error: "Invalid credentials" });
 
-      const valid = await verifyPassword(password, user.password);
+      try {
+        const valid = await bcrypt.compare(password, user.password);
 
-      if (!valid)
-        return res.status(401).json({ error: "Invalid credentials" });
+        if (!valid)
+          return res.status(401).json({ error: "Invalid credentials" });
 
-      res.json({
-        id: user.id,
-        email: user.email,
-        username: user.username,
-      });
+        res.json({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          status: 200,
+        });
+
+      } catch {
+        res.status(500).json({ error: "Server error" });
+      }
     }
   );
 });
-
 
 // GET USER BY ID
 router.get("/:id", (req, res) => {

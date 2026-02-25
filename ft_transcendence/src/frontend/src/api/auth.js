@@ -1,4 +1,4 @@
-const BASE_URL = "https://localhost:8443/api/auth";
+const BASE_URL = window.location.origin + "/api/auth";
 
 export async function register({ email, username, password }) {
   const res = await fetch(`${BASE_URL}/register`, {
@@ -36,7 +36,7 @@ export async function logout() {
 }
 
 export async function me(accessToken) {
-  const res = await fetch(`https://localhost:8443/api/me`, {
+  const res = await fetch(window.location.origin + `/api/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

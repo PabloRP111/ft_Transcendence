@@ -14,7 +14,7 @@ app.use(express.json());
 
 // permitir el dev server de React
 app.use(cors({
-  origin: "https://localhost:5173",
+  origin: "*",
   credentials: true // para enviar cookies httpOnly
 }));
 

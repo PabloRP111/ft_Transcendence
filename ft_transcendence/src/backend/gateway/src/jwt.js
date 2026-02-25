@@ -41,38 +41,36 @@ export function verifyRefreshToken(token) {
 }
 
 // DB helpers
-export async function storeRefreshToken(userId, token, expiresAt) {
+export async function storeSession(userId, token, expiresAt) {
   return new Promise((resolve, reject) => {
     db.run(
-      "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-      [userId, token, expiresAt],
+      `
+      INSERT OR REPLACE INTO sessions
+      (user_id, refresh_token, expires_at, created_at)
+      VALUES (?, ?, ?, ?)
+      `,
+      [userId, token, expiresAt, Math.floor(Date.now() / 1000)],
       err => err ? reject(err) : resolve()
     );
   });
 }
 
-export async function deleteRefreshToken(token) {
+export async function deleteSession(userId) {
   return new Promise((resolve, reject) => {
-    db.run("DELETE FROM refresh_tokens WHERE token = ?", [token], function(err) {
-      if (err)
-        reject(err);
-      else
-        resolve();
-    });
+    db.run(
+      "DELETE FROM sessions WHERE user_id = ?",
+      [userId],
+      err => err ? reject(err) : resolve()
+    );
   });
 }
 
-export async function findRefreshToken(token) {
+export async function findSessionByUser(userId) {
   return new Promise((resolve, reject) => {
     db.get(
-      "SELECT * FROM refresh_tokens WHERE token = ?",
-      [token],
-      (err, row) => {
-        if (err)
-          reject(err);
-        else
-          resolve(row);
-      }
+      "SELECT * FROM sessions WHERE user_id = ?",
+      [userId],
+      (err, row) => err ? reject(err) : resolve(row)
     );
   });
 }

@@ -7,7 +7,7 @@ services:
     ports:
       - "8443:443"
     depends_on:
-    #  - frontend
+      - frontend
       - gateway
       - users
     networks:
@@ -29,11 +29,13 @@ services:
     networks:
       - transcendence
 
-#  frontend:
-#    container_name: frontend
-#    build: ./frontend
-#    networks:
-#      - transcendence
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - transcendence
 
 volumes:
   users_data:

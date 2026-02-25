@@ -7,12 +7,12 @@ const db = new sqlite3.Database("/data/gateway.db", err => {
 
 db.serialize(() => {
   db.run(`
-    CREATE TABLE IF NOT EXISTS refresh_tokens (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      token TEXT,
-      expires_at INTEGER
-    )
+    CREATE TABLE IF NOT EXISTS sessions (
+      user_id INTEGER PRIMARY KEY,
+      refresh_token TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
   `);
 });
 

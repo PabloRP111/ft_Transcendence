@@ -24,7 +24,7 @@ export default function Login() {
     }
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = async e => {
     e.preventDefault();
     try {
       const res = await refresh();
@@ -35,7 +35,7 @@ export default function Login() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async e => {
     e.preventDefault();
     try {
       const res = await logout();
@@ -58,7 +58,6 @@ export default function Login() {
       <button onClick={handleRefresh}>Refresh Token</button>
       <button onClick={handleLogout}>Logout</button>
       <p>{msg}</p>
-      <p>Access Token: {accessToken}</p>
     </div>
   );
 }
