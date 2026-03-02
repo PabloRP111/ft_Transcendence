@@ -1,7 +1,7 @@
-const BASE_URL = window.location.origin + "/api/auth";
+const BASE_URL = window.location.origin + "/api";
 
 export async function register({ email, username, password }) {
-  const res = await fetch(`${BASE_URL}/register`, {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, username, password }),
@@ -10,7 +10,7 @@ export async function register({ email, username, password }) {
 }
 
 export async function login({ email, password }) {
-  const res = await fetch(`${BASE_URL}/login`, {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -20,7 +20,7 @@ export async function login({ email, password }) {
 }
 
 export async function refresh() {
-  const res = await fetch(`${BASE_URL}/refresh`, {
+  const res = await fetch(`${BASE_URL}/auth/refresh`, {
     method: "POST",
     credentials: "include"
   });
@@ -28,7 +28,7 @@ export async function refresh() {
 }
 
 export async function logout() {
-  const res = await fetch(`${BASE_URL}/logout`, {
+  const res = await fetch(`${BASE_URL}/auth/logout`, {
     method: "POST",
     credentials: "include"
   });
@@ -36,10 +36,20 @@ export async function logout() {
 }
 
 export async function me(accessToken) {
-  const res = await fetch(window.location.origin + `/api/me`, {
+  const res = await fetch(`${BASE_URL}/me`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
+  return res.json();
+}
+
+export async function getLanding(accessToken) {
+  const res = await fetch(`${BASE_URL}/landing`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
   return res.json();
 }

@@ -17,6 +17,9 @@ down:
 	@echo "🛑 Parando contenedores..."
 	@$(COMPOSE) down
 
+reload: down up
+	@echo "Recargando containers"
+
 fclean: down
 	@echo "🧨 Borrando volúmenes del proyecto..."
 	@docker volume rm src_gateway_data src_users_data || true
@@ -25,6 +28,8 @@ fclean: down
 	@docker images -q | xargs -r docker rmi -f
 	@echo "🗑 Borrando bases de datos locales..."
 	@rm -f ./src/backend/micro_services/users/users.db
+	@rm -f ./src/backend/gateway/src/gateway.db
+	@rm -f ./src/backend/gateway/src/cookies.txt
 	@echo "✅ Limpieza completa"
 
 logs:
@@ -53,4 +58,4 @@ nginx:
 
 re: fclean all logs
 
-.PHONY: all re status build up up-no-build down clean fclean logs gateway users frontend nginx
+.PHONY: all re status build up up-no-build down reload fclean logs gateway users frontend nginx
