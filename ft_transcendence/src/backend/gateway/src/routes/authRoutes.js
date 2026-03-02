@@ -5,8 +5,7 @@ import {
   verifyRefreshToken,
   storeSession,
   findSessionByUser,
-  deleteSession,
-  hashToken
+  deleteSession
 } from "../jwt.js";
 import fetch from "node-fetch";
 
@@ -57,9 +56,9 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
+
+  if (!email || !password)
     return res.status(400).json({ error: "Missing credentials" });
-  }
 
   try {
     const response = await fetch(`${USERS_SERVICE}/login`, {
@@ -68,25 +67,24 @@ router.post("/login", async (req, res) => {
       body: JSON.stringify({ email, password }),
     });
 
-    // 1. Obtener el cuerpo de la respuesta del microservicio
     const data = await response.json().catch(() => ({}));
 
-    // 2. Si la respuesta NO es exitosa (4xx o 5xx)
-    if (!response.ok) {
-      // Devolvemos el mismo status y el mismo error que nos dio el microservicio
+    if (!response.ok)
       return res.status(response.status).json(data);
-    }
-    // 3. Si llegamos aquí, es un 200 OK del microservicio
-  
-    // Proceso de tokens (esto ocurre en el Gateway)
-    const accessToken = generateAccessToken(data);
-    const { token: refreshToken, exp } = generateRefreshToken(data);
 
-    await storeSession(data.id, hashToken(refreshToken), exp);
+    // generar tokens
+    const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username);
+    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id);
+
+    // sesión global única (reemplaza la anterior)
+    await storeSession(data.id, {
+      refresh_expires_at: refreshExp,
+      last_access_expires_at: accessExp
+    });
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: true, 
+      secure: true,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
@@ -94,7 +92,6 @@ router.post("/login", async (req, res) => {
     return res.json({ accessToken });
 
   } catch (error) {
-    // Este error es de RED (el servicio de usuarios está caído)
     console.error("Communication Error:", error);
     return res.status(503).json({ error: "Service Unavailable" });
   }
@@ -102,43 +99,48 @@ router.post("/login", async (req, res) => {
 
 router.post("/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
+  const accessToken = extractAccessToken(req);
 
-  if (!refreshToken)
-    return res.status(401).json({ error: "Missing refresh token" });
+  if (!refreshToken || !accessToken)
+    return res.status(401).json({ error: "Missing tokens" });
 
-  let decoded;
+  let refreshPayload;
+  let accessPayload;
 
-  // Verificar JWT
+  // verificar firma + expiración JWT
   try {
-    decoded = verifyRefreshToken(refreshToken);
+    refreshPayload = verifyRefreshToken(refreshToken);
+    accessPayload = verifyAccessToken(accessToken);
   } catch {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ error: "Invalid or expired token" });
   }
 
   try {
-    // Buscar sesión del usuario
-    const session = await findSessionByUser(decoded.id);
+    const session = await findSessionByUser(refreshPayload.id);
 
     if (!session)
       return res.status(401).json({ error: "No active session" });
 
-    // Comparar token almacenado con el recibido
-    const hashed = hashToken(refreshToken);
+    // refresh debe ser el último emitido
+    if (refreshPayload.expMs !== session.refresh_expires_at)
+      return res.status(401).json({ error: "Session replaced" });
 
-    if (session.refresh_token !== hashed)
-      return res.status(401).json({ error: "Session revoked" });
+    // access debe ser el último emitido
+    if (accessPayload.expMs !== session.last_access_expires_at)
+      return res.status(401).json({ error: "Old access token" });
 
-    // Comprobar expiración en DB
-    if (session.expires_at < Math.floor(Date.now() / 1000))
-    {
-      await deleteSession(decoded.id);
-      return res.status(401).json({ error: "Refresh token expired" });
-    }
+    // generar nuevo access token
+    const { token: newAccess, expMs: newAccessExp } =
+      generateAccessToken(refreshPayload.id);
 
-    // Generar nuevo access token
-    const newAccessToken = generateAccessToken({ id: decoded.id });
+    // actualizar solo access expiry
+    await storeSession(refreshPayload.id, {
+      refresh_expires_at: session.refresh_expires_at,
+      last_access_expires_at: newAccessExp
+    });
 
-    return res.json({ accessToken: newAccessToken });
+    return res.json({ accessToken: newAccess });
+
   } catch (err) {
     console.error("Refresh error:", err);
     return res.status(500).json({ error: "Server error" });
@@ -148,14 +150,17 @@ router.post("/refresh", async (req, res) => {
 router.post("/logout", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   
-  if (refreshToken)
-  {
+  if (refreshToken) {
     try {
       const decoded = verifyRefreshToken(refreshToken);
       await deleteSession(decoded.id);
-    } catch {}
+    } catch (err) {
+      // token inválido o ya caducado, da igual: seguimos con logout
+      console.error("Logout warning:", err);
+    }
   }
 
+  // Limpiamos la cookie en el frontend
   res.clearCookie("refreshToken");
   res.json({ message: "Logged out" });
 });

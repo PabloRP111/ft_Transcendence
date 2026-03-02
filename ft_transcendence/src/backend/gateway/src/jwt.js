@@ -1,34 +1,37 @@
 import jwt from "jsonwebtoken";
 import db from "./db.js";
-import crypto from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
-export function hashToken(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
-
 // token corto (login normal)
-export function generateAccessToken(user) {
-  return jwt.sign(
-    { id: user.id },
+export function generateAccessToken(userId) {
+  const expMs = Date.now() + 15 * 60 * 1000; // 15 min
+
+  const token = jwt.sign(
+    { id: userId, expMs },
     ACCESS_SECRET,
     { expiresIn: "15m" }
   );
+
+  return { token, expMs };
 }
 
 // token largo (renovar sesión)
-export function generateRefreshToken(user) {
+export function generateRefreshToken(userId, username) {
+  const expMs = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 días
+
   const token = jwt.sign(
-    { id: user.id },
+    {
+      id: userId,
+      username,
+      expMs
+    },
     REFRESH_SECRET,
     { expiresIn: "7d" }
   );
 
-  const { exp } = jwt.verify(token, REFRESH_SECRET);
-
-  return { token, exp };
+  return { token, expMs };
 }
 
 // Verificación
@@ -41,15 +44,20 @@ export function verifyRefreshToken(token) {
 }
 
 // DB helpers
-export async function storeSession(userId, token, expiresAt) {
+export async function storeSession(userId, session) {
   return new Promise((resolve, reject) => {
     db.run(
       `
       INSERT OR REPLACE INTO sessions
-      (user_id, refresh_token, expires_at, created_at)
+      (user_id, refresh_expires_at, last_access_expires_at, created_at)
       VALUES (?, ?, ?, ?)
       `,
-      [userId, token, expiresAt, Math.floor(Date.now() / 1000)],
+      [
+        userId,
+        session.refresh_expires_at,
+        session.last_access_expires_at,
+        Date.now()
+      ],
       err => err ? reject(err) : resolve()
     );
   });

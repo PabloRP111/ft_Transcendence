@@ -9,8 +9,8 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS sessions (
       user_id INTEGER PRIMARY KEY,
-      refresh_token TEXT NOT NULL,
-      expires_at INTEGER NOT NULL,
+      refresh_expires_at INTEGER NOT NULL,
+      last_access_expires_at INTEGER NOT NULL,
       created_at INTEGER NOT NULL
     );
   `);
