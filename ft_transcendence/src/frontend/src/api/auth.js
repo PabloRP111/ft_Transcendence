@@ -43,13 +43,3 @@ export async function me(accessToken) {
   });
   return res.json();
 }
-
-export async function getLanding(accessToken) {
-  const res = await fetch(`${BASE_URL}/landing`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  return res.json();
-}

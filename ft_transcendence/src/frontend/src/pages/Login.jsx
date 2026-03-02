@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, refresh, logout, getLanding } from "../api/auth.js";
+import { login, refresh, logout } from "../api/auth.js";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
@@ -18,16 +18,7 @@ export default function Login() {
         return;
       }
 
-      setAccessToken(res.accessToken);
-
-      const test = await getLanding(res.accessToken);
-
-      if (test.message) {
-        navigate("/landing");
-      } else {
-        setMsg("Token inválido");
-      }
-
+      navigate("/landing");
     } catch (err) {
       setMsg("Fetch failed in login: " + err.message);
     }
