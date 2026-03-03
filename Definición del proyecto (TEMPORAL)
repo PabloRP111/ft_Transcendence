@@ -45,25 +45,9 @@ total: 8pts
 	◦ Handle network latency and disconnections gracefully.
 	◦ Provide a smooth user experience for remote gameplay.
 	◦ Implement reconnection logic.
-• Minor: Advanced chat features (enhances the basic chat from "User interaction" //BONUS
-  module).
-	◦ Ability to block users from messaging you.
-	◦ Invite users to play games directly from chat.
-	◦ Game/tournament notifications in chat.
-	◦ Access to user profiles from chat interface.
-	◦ Chat history persistence.
-	◦ Typing indicators and read receipts
-• Minor: Implement a tournament system.
-	◦ Clear matchup order and bracket system.
-	◦ Track who plays against whom.
-	◦ Matchmaking system for tournament participants.
-	◦ Tournament registration and management.
-• Minor: Implement spectator mode for games.
-	◦ Allow users to watch ongoing games.
-	◦ Real-time updates for spectators.
-	◦ Optional: spectator chat.
 
-total: 7pts
+
+total: 4pts
 
 Elegir:
 ------
@@ -91,25 +75,66 @@ total: 2pts
 	◦ Each service should have a single responsibility.
 total: 2pts
 
-TOTAL 21 pts
+TOTAL 18 pts
+
+
+EXTRAS
+------
+• Minor: Support for additional browsers.
+	◦ Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge,
+	etc.).
+	◦ Test and fix all features in each browser.
+	◦ Document any browser-specific limitations.
+	◦ Consistent UI/UX across all supported browsers.
+
+• Minor: Implement a complete 2FA (Two-Factor Authentication) system for the
+users.
+• Minor: User activity analytics and insights dashboard.
+• Minor: Implement a tournament system.
+	◦ Clear matchup order and bracket system.
+	◦ Track who plays against whom.
+	◦ Matchmaking system for tournament participants.
+	◦ Tournament registration and management.
+• Minor: Implement spectator mode for games.
+	◦ Allow users to watch ongoing games.
+	◦ Real-time updates for spectators.
+	◦ Optional: spectator chat.
+• Minor: Custom-made design system with reusable components, including a proper
+	color palette, typography, and icons (minimum: 10 reusable components).
+• Minor: Implement advanced search functionality with filters, sorting, and pagina-
+	tion. Filtros de orden alfabetico, partidas jugadas, puntuación.
+• Minor: File upload and management system.
+	◦ Support multiple file types (images, documents, etc.).
+	◦ Client-side and server-side validation (type, size, format).
+	◦ Secure file storage with proper access control.
+	◦ File preview functionality where applicable.
+	◦ Progress indicators for uploads.
+	◦ Ability to delete uploaded files.
+• Minor: Advanced chat features (enhances the basic chat from "User interaction" //BONUS
+  module).
+	◦ Ability to block users from messaging you.
+	◦ Invite users to play games directly from chat.
+	◦ Game/tournament notifications in chat.
+	◦ Access to user profiles from chat interface.
+	◦ Chat history persistence.
+	◦ Typing indicators and read receipts
+
 
 STACK TECNOLÓGICO:
 -----------------
+Backend
+- Node
+- Express
+- PostgreSQL
+- SQL manual o query builder ligero
+Sin Prisma (a menos que el proyecto crezca mucho)
+
 Frontend
-- React + Vite 
-- Canvas API
-- Tailwind CSS 
-- Zustand
-- Socket.IO client
+- React
+- Vite
+- Tailwind (te ahorra tiempo enorme)
 
-Backend 
-- Node.js: NestJS
-- Socket.IO
-- JWT
-
-DB
-- PostgreSQL 
-
-DevOps 
-- Docker
-- Nginx
+Auth
+- Access en memoria
+- Refresh en cookie httpOnly
+- Gateway central
