@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { login, refresh, logout } from "../api/auth.js";
+import { login, logout } from "../api/auth.js";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
@@ -24,17 +24,6 @@ export default function Login() {
     }
   };
 
-  const handleRefresh = async e => {
-    e.preventDefault();
-    try {
-      const res = await refresh();
-      setAccessToken(res.accessToken);
-      setMsg(JSON.stringify(res));
-    } catch (err) {
-      setMsg("Fetch failed in refresh: " + err.message);
-    }
-  };
-
   const handleLogout = async e => {
     e.preventDefault();
     try {
@@ -55,7 +44,6 @@ export default function Login() {
         <button type="submit">Login</button>
       </form>
       <button onClick={() => navigate("/register")}>Go to Register</button>
-      <button onClick={handleRefresh}>Refresh Token</button>
       <button onClick={handleLogout}>Logout</button>
       <p>{msg}</p>
     </div>
