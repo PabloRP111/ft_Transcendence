@@ -11,7 +11,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/me" element={<Profile accessToken={null} />} />
+        <Route path="/profile" element={<Profile accessToken={null} />} />
         <Route path="/landing" element={<Landing />} />
       </Routes>
     </BrowserRouter>
