@@ -10,8 +10,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
     networks:
       - transcendence
 
@@ -46,13 +44,11 @@ services:
 
   frontend:
     build: ./frontend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     networks:
       - transcendence
     depends_on:
       - postgres
+    command: npm run dev 
 
 volumes:
   postgres_data:
