@@ -163,3 +163,26 @@ docker-compose up chat-db-only   # DB only for integration tests
 ```
 
 Migrations run automatically on startup. They must be idempotent (`IF NOT EXISTS`).
+
+
+## Learning Guidance
+
+To help the user understand the code and architecture while developing the chat-service, follow these guidelines:
+
+### 1. Add explanatory comments
+- Whenever generating or modifying files inside `src/` (or other key project files), add **inline comments** explaining what each section or function does.
+- Highlight purpose, flow, and key technical concepts (Express routes, middleware, async DB calls, Socket.IO events, etc.).
+
+### 2. Explain before creating new files
+
+Before creating any new config, source, or folder file, provide a brief explanation:
+
+- Why this file is needed
+- What it will contain
+- How it interacts with the rest of the project
+- Any critical decisions the user should know
+
+### 3. Emphasize beginner-friendly explanations
+
+Use plain language and step-by-step reasoning for technical content.
+Avoid assuming prior knowledge of TypeScript, Node.js, Express, Socket.IO, Docker, or PostgreSQL.
