@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: chat_pass
       POSTGRES_DB: chat_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - chat-db-data:/var/lib/postgresql/data
     healthcheck:
