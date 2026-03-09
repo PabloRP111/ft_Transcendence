@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { UserRound, Trophy, Cpu, LogOut, Pencil, Crown, Zap } from "lucide-react";
+import Navbar from "../components/Navbar";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,32 +49,7 @@ export default function ProfilePage() {
         <div className="scanline-overlay" />
       </div>
 
-      <motion.header
-        className="sticky top-0 z-30 border-b border-cyan-300/35 bg-[#05080f]/85 backdrop-blur-md"
-        initial={{ y: -28, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.55 }}
-      >
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
-          <span className="neon-title text-xs uppercase tracking-[0.34em] text-cyan-100">
-            TRANSCENDENCE PROFILE
-          </span>
-
-          <div className="flex items-center gap-3">
-            <Link to="/" className="neon-button text-[11px]">
-              Back to Grid
-            </Link>
-
-            <button
-              onClick={handleLogout}
-              className="neon-button neon-button-orange text-[11px]"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
-        </div>
-      </motion.header>
+      <Navbar />
 
       <motion.main
         className="relative z-20 flex items-center justify-center px-6 py-16"
