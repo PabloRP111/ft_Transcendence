@@ -99,7 +99,8 @@ router.post("/login", async (req, res) => {
 
 router.post("/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-  const accessToken = extractAccessToken(req);
+  const authHeader = req.headers.authorization;
+  const accessToken = authHeader?.split(" ")[1];
 
   if (!refreshToken || !accessToken)
     return res.status(401).json({ error: "Missing tokens" });
