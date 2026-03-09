@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { me } from "../api/auth.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
-export default function Profile({ accessToken }) {
+export default function Profile() {
+  const { accessToken } = useAuth();
   const [user, setUser] = useState(null);
 
   const handleMe = async () => {
@@ -13,6 +15,7 @@ export default function Profile({ accessToken }) {
     <div>
       <h1>Profile</h1>
       <button onClick={handleMe}>Load Profile</button>
+
       {user && (
         <div>
           <p>ID: {user.id}</p>

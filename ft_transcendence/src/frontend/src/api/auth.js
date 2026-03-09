@@ -6,6 +6,11 @@ export async function register({ email, username, password }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, username, password }),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
   return res.json();
 }
 
@@ -14,8 +19,13 @@ export async function login({ email, password }) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
-    credentials: "include" // esto envía cookies httpOnly automáticamente
+    credentials: "include"
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
   return res.json();
 }
 
@@ -24,6 +34,11 @@ export async function refresh() {
     method: "POST",
     credentials: "include"
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
   return res.json();
 }
 
@@ -32,6 +47,11 @@ export async function logout() {
     method: "POST",
     credentials: "include"
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
   return res.json();
 }
 
@@ -41,5 +61,10 @@ export async function me(accessToken) {
       Authorization: `Bearer ${accessToken}`,
     },
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
   return res.json();
 }
