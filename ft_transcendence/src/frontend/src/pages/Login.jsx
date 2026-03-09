@@ -6,7 +6,6 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [accessToken, setAccessToken] = useState("");
   const [msg, setMsg] = useState("");
 
   const handleLogin = async e => {
@@ -18,6 +17,11 @@ export default function Login() {
         return;
       }
 
+      if (res.accessToken) {
+        localStorage.setItem("accessToken", res.accessToken); // saves jwt token to browser's hard drive
+      }
+      localStorage.setItem("transcendence_auth", "1"); // sets auth flag
+
       navigate("/landing");
     } catch (err) {
       setMsg("Fetch failed in login: " + err.message);
@@ -28,7 +32,8 @@ export default function Login() {
     e.preventDefault();
     try {
       const res = await logout();
-      setAccessToken("");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("transcendence_auth");
       setMsg(JSON.stringify(res));
     } catch (err) {
       setMsg("Fetch failed in logout: " + err.message);
