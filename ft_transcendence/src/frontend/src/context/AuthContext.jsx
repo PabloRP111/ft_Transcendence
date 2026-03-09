@@ -19,18 +19,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const data = await refresh();
-
-        if (data.accessToken)
-          setAccessToken(data.accessToken);
-
+        const data = await refresh(); // llama a /auth/refresh usando la cookie
+        if (data.accessToken) setAccessToken(data.accessToken);
       } catch {
         setAccessToken(null);
+      } finally {
+        setLoading(false); // indica que ya terminó el refresh
       }
-
-      setLoading(false);
     };
-
     initAuth();
   }, []);
 

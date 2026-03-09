@@ -13,20 +13,21 @@ export default function Login() {
 
   const handleLogin = async e => {
     e.preventDefault();
+    setMsg("");
 
     try {
-      const data = await login({ email, password });
+      const data = await login({ email, password }); // backend devuelve accessToken y setea cookie refreshToken
 
       if (data.error) {
         setMsg(data.error);
         return;
       }
 
-      loginUser(data.accessToken);
-      navigate("/landing");
+      loginUser(data.accessToken); // actualiza estado global
+      navigate("/");               // redirige al landing
 
     } catch (err) {
-      setMsg("Fetch failed in login: " + err.message);
+      setMsg("Login failed: " + err.message);
     }
   };
 

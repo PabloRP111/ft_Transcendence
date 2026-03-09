@@ -99,36 +99,25 @@ router.post("/login", async (req, res) => {
 
 router.post("/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-  const authHeader = req.headers.authorization;
-  const accessToken = authHeader?.split(" ")[1];
-
-  if (!refreshToken || !accessToken)
+  if (!refreshToken)
     return res.status(401).json({ error: "Missing tokens" });
 
   let refreshPayload;
-  let accessPayload;
-
   // verificar firma + expiración JWT
   try {
     refreshPayload = verifyRefreshToken(refreshToken);
-    accessPayload = verifyAccessToken(accessToken);
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 
   try {
     const session = await findSessionByUser(refreshPayload.id);
-
     if (!session)
       return res.status(401).json({ error: "No active session" });
 
     // refresh debe ser el último emitido
     if (refreshPayload.expMs !== session.refresh_expires_at)
       return res.status(401).json({ error: "Session replaced" });
-
-    // access debe ser el último emitido
-    if (accessPayload.expMs !== session.last_access_expires_at)
-      return res.status(401).json({ error: "Old access token" });
 
     // generar nuevo access token
     const { token: newAccess, expMs: newAccessExp } =
@@ -141,7 +130,6 @@ router.post("/refresh", async (req, res) => {
     });
 
     return res.json({ accessToken: newAccess });
-
   } catch (err) {
     console.error("Refresh error:", err);
     return res.status(500).json({ error: "Server error" });
