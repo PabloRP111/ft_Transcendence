@@ -40,7 +40,7 @@ a {
     transform: perspective(960px) rotateX(74deg) translateY(0);
   }
   to {
-    transform: perspective(960px) rotateX(74deg) translateY(72px);
+    transform: perspective(960px) rotateX(74deg) translateY(60px);
   }
 }
 
