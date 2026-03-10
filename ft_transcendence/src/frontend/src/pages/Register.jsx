@@ -1,36 +1,127 @@
 import { useState } from "react";
-import { register } from "../api/auth.js";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { UserPlus, LogIn } from "lucide-react";
+import Navbar from "../components/Navbar";
+import { register } from "../api/auth.js";
 
-export default function Register() {
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.16, delayChildren: 0.18 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
+};
+
+export default function RegisterPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
 
-  const handleRegister = async e => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      e.preventDefault();
       const res = await register({ email, username, password });
-      setMsg(JSON.stringify(res));
+      if (res.error) {
+        setMsg(res.error);
+        return;
+      }
+      setMsg("Registration successful! You can now login.");
+      // Opcional: redirigir al login automáticamente
+      // navigate("/login");
     } catch (err) {
-      setMsg("Fetch failed in register: " + err.message);
+      setMsg("Fetch failed: " + err.message);
     }
   };
 
   return (
-    <div>
-      <h1>Register</h1>
-      <form onSubmit={handleRegister}>
-        <input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} />
-        <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} />
-        <button type="submit">Register</button>
-      </form>
-      <button onClick={() => navigate("/login")}>Go to Login</button>
-      <p>{msg}</p>
+    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="grid-atmosphere" />
+        <div className="grid-floor" />
+        <div className="scanline-overlay" />
+      </div>
+
+      <motion.main
+        className="relative z-20 flex items-center justify-center px-6 py-16"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.section
+          variants={itemVariants}
+          className="neon-panel w-full max-w-md p-10 text-center"
+        >
+          <motion.h1
+            variants={itemVariants}
+            className="neon-title text-4xl uppercase tracking-[0.16em] text-gridBlue mb-6"
+          >
+            CREATE ACCOUNT
+          </motion.h1>
+
+          <motion.form
+            variants={itemVariants}
+            className="flex flex-col gap-4"
+            onSubmit={handleRegister}
+          >
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            />
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            />
+
+            <button
+              type="submit"
+              className="neon-button flex items-center justify-center gap-2 mt-2"
+            >
+              <UserPlus size={16} />
+              Register
+            </button>
+          </motion.form>
+
+          <motion.div
+            variants={itemVariants}
+            className="mt-6 flex justify-center gap-4"
+          >
+            <button
+              onClick={() => navigate("/login")}
+              className="neon-button-orange flex items-center gap-2"
+            >
+              <LogIn size={16} />
+              Go to Login
+            </button>
+          </motion.div>
+
+          {msg && (
+            <motion.p
+              variants={itemVariants}
+              className="mt-4 text-xs uppercase tracking-[0.2em] text-cyan-100/70"
+            >
+              {msg}
+            </motion.p>
+          )}
+        </motion.section>
+      </motion.main>
     </div>
   );
 }

@@ -1,9 +1,24 @@
 import { useState } from "react";
-import { login, logout } from "../api/auth.js";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import { motion } from "framer-motion";
+import { LogIn, UserPlus, LogOut } from "lucide-react";
+import Navbar from "../components/Navbar";
+import { login, logout } from "../api/auth.js";
 
-export default function Login() {
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.16, delayChildren: 0.18 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
+};
+
+export default function LoginPage() {
   const navigate = useNavigate();
   const { loginUser, logoutUser } = useAuth();
 
@@ -11,7 +26,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
 
-  const handleLogin = async e => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setMsg("");
 
@@ -23,57 +38,113 @@ export default function Login() {
         return;
       }
 
-      loginUser(data.accessToken); // actualiza estado global
-      navigate("/");               // redirige al landing
+      if (res.accessToken) localStorage.setItem("accessToken", res.accessToken);
+      localStorage.setItem("transcendence_auth", "1");
 
+      navigate("/landing");
     } catch (err) {
-      setMsg("Login failed: " + err.message);
+      setMsg("Fetch failed: " + err.message);
     }
   };
 
-  const handleLogout = async e => {
+  const handleLogout = async (e) => {
     e.preventDefault();
 
     try {
       await logout();
-      logoutUser();
-      navigate("/login");
-
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("transcendence_auth");
+      setMsg("Logged out successfully");
     } catch (err) {
-      setMsg("Fetch failed in logout: " + err.message);
+      setMsg("Fetch failed: " + err.message);
     }
   };
 
   return (
-    <div>
-      <h1>Login</h1>
+    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="grid-atmosphere" />
+        <div className="grid-floor" />
+        <div className="scanline-overlay" />
+      </div>
 
-      <form onSubmit={handleLogin}>
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-        />
+      <motion.main
+        className="relative z-20 flex items-center justify-center px-6 py-16"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        <motion.section
+          variants={itemVariants}
+          className="neon-panel w-full max-w-md p-10 text-center"
+        >
+          <motion.h1
+            variants={itemVariants}
+            className="neon-title text-4xl uppercase tracking-[0.16em] text-gridBlue mb-6"
+          >
+            SYSTEM ACCESS
+          </motion.h1>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
+          <motion.form
+            variants={itemVariants}
+            className="flex flex-col gap-4"
+            onSubmit={handleLogin}
+          >
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+            />
 
-        <button type="submit">Login</button>
-      </form>
+            <button
+              type="submit"
+              className="neon-button flex items-center justify-center gap-2 mt-2"
+            >
+              <LogIn size={16} />
+              Login
+            </button>
+          </motion.form>
 
-      <button onClick={() => navigate("/register")}>
-        Go to Register
-      </button>
+          <motion.div
+            variants={itemVariants}
+            className="mt-6 flex justify-center gap-4"
+          >
+            <button
+              onClick={() => navigate("/register")}
+              className="neon-button-orange flex items-center gap-2"
+            >
+              <UserPlus size={16} />
+              Register
+            </button>
 
-      <button onClick={handleLogout}>
-        Logout
-      </button>
+            <button
+              onClick={handleLogout}
+              className="neon-button flex items-center gap-2"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </motion.div>
 
-      <p>{msg}</p>
+          {msg && (
+            <motion.p
+              variants={itemVariants}
+              className="mt-4 text-xs uppercase tracking-[0.2em] text-cyan-100/70"
+            >
+              {msg}
+            </motion.p>
+          )}
+        </motion.section>
+      </motion.main>
     </div>
   );
 }
