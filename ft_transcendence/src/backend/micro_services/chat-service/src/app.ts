@@ -1,5 +1,7 @@
 import express from 'express';
 import { authenticate } from './middleware/auth';
+import conversationsRouter from './routes/conversations';
+import messagesRouter from './routes/messages';
 
 const app = express();
 
@@ -17,6 +19,11 @@ app.get('/health', (_req, res) => {
 // Any handler below this point can safely read req.userId.
 app.use(authenticate);
 
-// Future routes (conversations, messages, etc.) go here.
+// POST /conversations, GET /conversations
+app.use('/conversations', conversationsRouter);
+
+// POST /conversations/:conversationId/messages
+// GET  /conversations/:conversationId/messages
+app.use('/conversations', messagesRouter);
 
 export default app;
