@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { pool } from "./db.js";
+import crypto from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
@@ -18,13 +19,14 @@ export function generateAccessToken(userId) {
 }
 
 // token largo (renovar sesión)
-export function generateRefreshToken(userId, username) {
-  const expMs = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 días
+export function generateRefreshToken(userId, username, sessionId) {
+  const expMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
 
   const token = jwt.sign(
     {
       id: userId,
       username,
+      sid: sessionId,
       expMs
     },
     REFRESH_SECRET,
@@ -48,15 +50,17 @@ export async function storeSession(userId, session) {
   await pool.query(
     `
     INSERT INTO sessions
-    (user_id, refresh_expires_at, last_access_expires_at, created_at)
-    VALUES ($1,$2,$3,$4)
+    (user_id, session_id, refresh_expires_at, last_access_expires_at, created_at)
+    VALUES ($1,$2,$3,$4,$5)
     ON CONFLICT (user_id)
     DO UPDATE SET
+      session_id = EXCLUDED.session_id,
       refresh_expires_at = EXCLUDED.refresh_expires_at,
       last_access_expires_at = EXCLUDED.last_access_expires_at
     `,
     [
       userId,
+      session.session_id,
       session.refresh_expires_at,
       session.last_access_expires_at,
       Date.now()

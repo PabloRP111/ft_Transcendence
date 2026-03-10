@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn, UserPlus, LogOut } from "lucide-react";
-import Navbar from "../components/Navbar";
 import { login, logout } from "../api/auth.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -31,30 +31,16 @@ export default function LoginPage() {
     setMsg("");
 
     try {
-      const data = await login({ email, password }); // backend devuelve accessToken y setea cookie refreshToken
+      const data = await login({ email, password });
 
       if (data.error) {
         setMsg(data.error);
         return;
       }
 
-      if (res.accessToken) localStorage.setItem("accessToken", res.accessToken);
-      localStorage.setItem("transcendence_auth", "1");
+      loginUser(data.accessToken);
+      navigate("/");
 
-      navigate("/landing");
-    } catch (err) {
-      setMsg("Fetch failed: " + err.message);
-    }
-  };
-
-  const handleLogout = async (e) => {
-    e.preventDefault();
-
-    try {
-      await logout();
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("transcendence_auth");
-      setMsg("Logged out successfully");
     } catch (err) {
       setMsg("Fetch failed: " + err.message);
     }
@@ -116,22 +102,14 @@ export default function LoginPage() {
 
           <motion.div
             variants={itemVariants}
-            className="mt-6 flex justify-center gap-4"
+            className="mt-8 flex justify-center gap-4"
           >
             <button
               onClick={() => navigate("/register")}
               className="neon-button-orange flex items-center gap-2"
             >
-              <UserPlus size={16} />
+              <UserPlus size={20} />
               Register
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="neon-button flex items-center gap-2"
-            >
-              <LogOut size={16} />
-              Logout
             </button>
           </motion.div>
 

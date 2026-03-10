@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LogIn, UserPlus, UserRoundCog } from "lucide-react";
 import Button from "./Button.jsx";
+import { logout } from "../api/auth.js";
+import { useNavigate } from "react-router-dom";
 
 const glitchHover = {
   x: [0, -2, 2, -1, 0],
@@ -39,6 +41,20 @@ export default function Navbar() {
     };
   }, []);
 
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("transcendence_auth");
+      setIsLoggedIn(false);
+      navigate("/");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   return (
     <motion.header
       className="sticky top-0 z-30 border-b border-cyan-300/35 bg-[#05080f]/85 backdrop-blur-md"
@@ -60,13 +76,20 @@ export default function Navbar() {
           </span>
 
           {isLoggedIn ? (
-            <Button
-              to="/profile"
-              className="neon-profile-pulse text-[10px] sm:text-[11px]"
-              icon={<UserRoundCog size={16} />}
-            >
-              User Profile
-            </Button>
+            <>
+              <Button
+                to="/profile"
+                className="neon-profile-pulse text-[10px] sm:text-[11px]"
+                icon={<UserRoundCog size={16} />}>
+                User Profile
+              </Button>
+
+              <button
+                onClick={handleLogout}
+                className="neon-button text-[10px] sm:text-[11px]">
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <Button
