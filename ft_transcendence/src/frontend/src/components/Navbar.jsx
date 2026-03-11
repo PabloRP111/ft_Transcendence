@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { LogIn, UserPlus, UserRoundCog } from "lucide-react";
 import Button from "./Button.jsx";
-import { logout } from "../api/auth.js";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const glitchHover = {
   x: [0, -2, 2, -1, 0],
   textShadow: [
     "0 0 6px rgba(0, 242, 255, 0.8)",
     "-2px 0 0 rgba(255, 140, 0, 0.8), 2px 0 0 rgba(0, 242, 255, 0.9)",
-    "2px 0 0 rgba(255, 140, 0, 0.8), -2px 0 0 rgba(0, 242, 255, 0.9)",
-    "-1px 0 0 rgba(255, 140, 0, 0.7), 1px 0 0 rgba(0, 242, 255, 0.95)",
+    "2px 0 0 rgba(255, 140, 0.8), -2px 0 0 rgba(0, 242, 255, 0.9)",
+    "-1px 0 0 rgba(255, 140, 0.7), 1px 0 0 rgba(0, 242, 255, 0.95)",
     "0 0 14px rgba(0, 242, 255, 1)",
   ],
   transition: {
@@ -21,39 +20,21 @@ const glitchHover = {
 };
 
 export default function Navbar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const syncSession = () => {
-      setIsLoggedIn(
-        localStorage.getItem("transcendence_auth") === "1" ||
-          Boolean(localStorage.getItem("accessToken")),
-      );
-    };
-
-    syncSession();
-    window.addEventListener("storage", syncSession);
-    window.addEventListener("focus", syncSession);
-
-    return () => {
-      window.removeEventListener("storage", syncSession);
-      window.removeEventListener("focus", syncSession);
-    };
-  }, []);
-
+  const { isAuthenticated, logoutUser, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      await logout();
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("transcendence_auth");
-      setIsLoggedIn(false);
+      await logoutUser();
       navigate("/");
     } catch (err) {
       console.error("Logout failed:", err);
     }
   };
+
+  // Mientras se resuelve el refresh token, se puede mostrar un navbar vacío o loading
+  if (loading)
+    return null;
 
   return (
     <motion.header
@@ -75,18 +56,20 @@ export default function Navbar() {
             USER SYSTEM
           </span>
 
-          {isLoggedIn ? (
+          {isAuthenticated ? (
             <>
               <Button
                 to="/profile"
                 className="neon-profile-pulse text-[10px] sm:text-[11px]"
-                icon={<UserRoundCog size={16} />}>
+                icon={<UserRoundCog size={16} />}
+              >
                 User Profile
               </Button>
 
               <button
                 onClick={handleLogout}
-                className="neon-button text-[10px] sm:text-[11px]">
+                className="neon-button text-[10px] sm:text-[11px]"
+              >
                 Logout
               </button>
             </>

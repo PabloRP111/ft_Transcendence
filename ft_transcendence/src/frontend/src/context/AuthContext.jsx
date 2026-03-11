@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { refresh } from "../api/auth.js";
+import { refresh, logout as apiLogout } from "../api/auth.js";
 
 const AuthContext = createContext();
 
@@ -12,15 +12,23 @@ export function AuthProvider({ children }) {
     setAccessToken(token);
   };
 
-  const logoutUser = () => {
-    setAccessToken(null);
+  const logoutUser = async () => {
+    try {
+      await apiLogout(); // llama al backend y elimina sesión + cookie refresh
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      setAccessToken(null);
+      localStorage.removeItem("transcendence_auth");
+    }
   };
 
   useEffect(() => {
     const initAuth = async () => {
       try {
         const data = await refresh(); // llama a /auth/refresh usando la cookie
-        if (data.accessToken) setAccessToken(data.accessToken);
+        if (data.accessToken)
+          setAccessToken(data.accessToken);
       } catch {
         setAccessToken(null);
       } finally {
