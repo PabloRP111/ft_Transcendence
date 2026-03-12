@@ -6,6 +6,7 @@ import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
 import Profile from "./pages/Profile.jsx";
 import Landing from "./pages/Landing.jsx";
+import Game from "./pages/Game.jsx";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/profile" element={<Profile />} />
           </Route>
+          <Route path="/game" element={<Game />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
