@@ -40,13 +40,16 @@ return (
       </div>
       <Navbar />
 
-	  {/* 4. MODULAR CHAT INJECTION 
-          The chat will only be mounted if the user is logged in.
-          The 'fixed' position ensures it doesn't interfere with the central layout.
+		{/* MODULAR CHAT INJECTION 
+          - 'fixed left-0 top-24 bottom-12': Sticks to the left and spans the space between Nav and Footer.
+          - 'w-[calc(50vw-384px)]': Calculates the exact empty space to the left of the central panel (768px / 2 = 384px).
+          - 'flex items-center justify-center': Centers the ChatModule perfectly within that calculated box.
       */}
       {!loading && isAuthenticated && (
-        <aside className="fixed left-6 top-24 z-40 w-80 h-[60vh] hidden lg:block">
-          <ChatModule />
+        <aside className="fixed left-0 top-24 bottom-12 z-40 hidden lg:flex items-center justify-center w-[calc(50vw-384px)] px-4">
+          <div className="w-full max-w-[320px] h-[60vh] max-h-[550px]">
+            <ChatModule />
+          </div>
         </aside>
       )}
 
