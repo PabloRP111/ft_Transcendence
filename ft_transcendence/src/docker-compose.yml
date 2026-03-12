@@ -1,4 +1,18 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: transcendence_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: transcendence
+      POSTGRES_PASSWORD: transcendence
+      POSTGRES_DB: transcendence
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db:/docker-entrypoint-initdb.d
+    networks:
+      - transcendence
+
   nginx:
     build:
       context: ./backend/nginx
@@ -15,31 +29,32 @@ services:
 
   users:
     build: ./backend/micro_services/users
-    volumes:
-    - users_data:/data
     networks:
       - transcendence
+    depends_on:
+      - postgres
 
   gateway:
     build: ./backend/gateway
-    volumes:
-    - gateway_data:/data
     depends_on:
       - users
+      - postgres
     networks:
       - transcendence
 
   frontend:
     build: ./frontend
+    command: sh -c "npm install && npm run dev -- --host"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     networks:
       - transcendence
+    depends_on:
+      - postgres
 
 volumes:
-  users_data:
-  gateway_data:
+  postgres_data:
 
 networks:
   transcendence:
