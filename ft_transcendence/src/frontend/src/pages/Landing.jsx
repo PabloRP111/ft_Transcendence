@@ -28,7 +28,7 @@ const itemVariants = {
 
 export default function GridLanding() {
   return (
-    <div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />

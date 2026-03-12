@@ -12,6 +12,14 @@
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Tron palette variables */
+  --tron-primary: rgba(0, 242, 255, 0.2);
+  --tron-primary-strong: rgba(0, 242, 255, 0.35);
+  --tron-glow: rgba(0, 242, 255, 0.45);
+  --tron-text: #d8fbff;
+  --tron-border: rgba(0,242,255,0.35);
+  --tron-secondary: rgba(255, 140, 0, 0.12);
 }
 
 * {
@@ -84,22 +92,26 @@ a {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 18%, rgba(0, 242, 255, 0.2), transparent 38%),
-      radial-gradient(circle at 8% 72%, rgba(255, 140, 0, 0.12), transparent 35%),
-      radial-gradient(circle at 92% 70%, rgba(0, 242, 255, 0.1), transparent 36%),
+      radial-gradient(circle at 50% 18%, var(--tron-primary), transparent 38%),
+      radial-gradient(circle at 8% 72%, var(--tron-secondary), transparent 35%),
+      radial-gradient(circle at 92% 70%, var(--tron-primary), transparent 36%),
       linear-gradient(180deg, rgba(2, 6, 12, 0.4) 0%, rgba(10, 10, 10, 1) 62%);
   }
 
   .grid-floor {
     position: absolute;
     inset: 42% -24% -45% -24%;
+
     background-image:
-      linear-gradient(to right, rgba(0, 242, 255, 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 242, 255, 0.35) 1px, transparent 1px);
+      linear-gradient(to right, var(--tron-primary-strong) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--tron-primary-strong) 1px, transparent 1px);
+
     background-size: 60px 60px;
     transform-origin: center top;
+
     animation: gridScroll 7s linear infinite;
-    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.45));
+
+    filter: drop-shadow(0 0 8px var(--tron-glow));
     opacity: 0.86;
   }
 

@@ -42,7 +42,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
@@ -61,14 +61,14 @@ export default function ProfilePage() {
           variants={itemVariants}
           className="neon-panel w-full max-w-3xl p-10 text-center"
         >
-          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/40 text-cyan-100 hover:bg-cyan-300/10">
+          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border-[color:var(--tron-border)] text-cyan-100 hover:bg-cyan-300/10">
             <Pencil size={16} />
           </button>
           <motion.div
             variants={itemVariants}
             className="mb-6 flex justify-center"
           >
-            <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full border-[color:var(--tron-border)]">
               <UserRound size={48} />
             </div>
           </motion.div>
