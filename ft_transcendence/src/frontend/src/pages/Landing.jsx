@@ -2,6 +2,8 @@ import { motion } from "framer-motion"; //animations
 import { Cpu } from "lucide-react"; //icons
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
+import ChatModule from "../components/ChatModule.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,15 +29,26 @@ const itemVariants = {
 };
 
 export default function GridLanding() {
-  return (
+	const { isAuthenticated, loading } = useAuth();
+
+return (
     <div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
         <div className="scanline-overlay" />
       </div>
-
       <Navbar />
+
+	  {/* 4. MODULAR CHAT INJECTION 
+          The chat will only be mounted if the user is logged in.
+          The 'fixed' position ensures it doesn't interfere with the central layout.
+      */}
+      {!loading && isAuthenticated && (
+        <aside className="fixed left-6 top-24 z-40 w-80 h-[60vh] hidden lg:block">
+          <ChatModule />
+        </aside>
+      )}
 
       <motion.main
         className="relative z-20 flex flex-1 min-h-[calc(100vh-176px)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
