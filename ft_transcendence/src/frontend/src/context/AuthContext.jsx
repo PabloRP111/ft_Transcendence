@@ -4,7 +4,6 @@ import { refresh, logout as apiLogout } from "../api/auth.js";
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-
   const [accessToken, setAccessToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,7 +54,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context)
     throw new Error("useAuth must be used within AuthProvider");
 

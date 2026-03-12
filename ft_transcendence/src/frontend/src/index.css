@@ -36,7 +36,7 @@ body {
   margin: 0;
   min-width: 320px;
   background: #0a0a0a;
-  color: #d8fbff;
+  color: var(--tron-text);
 }
 
 a {
@@ -87,6 +87,45 @@ a {
   }
 }
 
+@keyframes cycleRunA {
+  from {
+    transform: translateX(-20%) translateY(70vh);
+  }
+  to {
+    transform: translateX(120vw) translateY(55vh);
+  }
+}
+
+@keyframes cycleRunB {
+  from {
+    transform: translateX(120vw) translateY(65vh);
+  }
+  to {
+    transform: translateX(-20%) translateY(50vh);
+  }
+}
+
+@keyframes cycleRunC {
+  from {
+    transform: translateX(-10%) translateY(75vh);
+  }
+  to {
+    transform: translateX(120vw) translateY(60vh);
+  }
+}
+
+.cycle-a {
+  animation: cycleRunA 12s linear infinite;
+}
+
+.cycle-b {
+  animation: cycleRunB 18s linear infinite;
+}
+
+.cycle-c {
+  animation: cycleRunC 15s linear infinite;
+}
+
 @layer components {
   .grid-atmosphere {
     position: absolute;
@@ -128,6 +167,26 @@ a {
     mix-blend-mode: screen;
     opacity: 0.26;
     animation: scanMove 0.28s linear infinite;
+  }
+
+  .lightcycle-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .lightcycle {
+    position: absolute;
+    width: 120px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--tron-primary-strong);
+    box-shadow:
+      0 0 10px var(--tron-glow),
+      0 0 22px var(--tron-glow);
+
+    opacity: 0.8;
   }
 
   .neon-title {

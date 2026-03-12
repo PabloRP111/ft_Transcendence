@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 import { UserRound, Trophy, Cpu, LogOut, Pencil, Crown, Zap } from "lucide-react";
 import Navbar from "../components/Navbar";
+import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -46,6 +46,9 @@ export default function ProfilePage() {
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        
+        <LightCycles />
+
         <div className="scanline-overlay" />
       </div>
 

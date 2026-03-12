@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UserPlus, LogIn } from "lucide-react";
-import Navbar from "../components/Navbar";
 import { register } from "../api/auth.js";
+import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -43,6 +43,9 @@ export default function RegisterPage() {
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        
+        <LightCycles />
+
         <div className="scanline-overlay" />
       </div>
 

@@ -60,7 +60,8 @@ router.post("/login", async (req, res) => {
     });
     const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) return res.status(response.status).json(data);
+    if (!response.ok)
+      return res.status(response.status).json(data);
 
     // Generar session_id único por login
     const sessionId = uuidv4();

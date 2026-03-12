@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { LogIn, UserPlus, LogOut } from "lucide-react";
 import { login, logout } from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
+import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -51,6 +52,9 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        
+        <LightCycles />
+
         <div className="scanline-overlay" />
       </div>
 

@@ -6,7 +6,6 @@ export default function useTronTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
-
     const path = location.pathname;
 
     // PROFILE

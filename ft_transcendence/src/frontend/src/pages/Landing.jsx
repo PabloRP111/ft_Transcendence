@@ -2,6 +2,7 @@ import { motion } from "framer-motion"; //animations
 import { Cpu } from "lucide-react"; //icons
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
+import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -32,6 +33,9 @@ export default function GridLanding() {
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        
+        <LightCycles />
+
         <div className="scanline-overlay" />
       </div>
 
