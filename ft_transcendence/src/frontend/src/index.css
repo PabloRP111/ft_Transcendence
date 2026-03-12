@@ -114,6 +114,7 @@ a {
   }
 }
 
+
 .cycle-a {
   animation: cycleRunA 12s linear infinite;
 }
@@ -124,6 +125,24 @@ a {
 
 .cycle-c {
   animation: cycleRunC 15s linear infinite;
+}
+
+.cycle-a::before,
+.cycle-c::before {
+  right: -8px;
+}
+
+.cycle-b::before {
+  left: -8px;
+}
+
+.cycle-a::after,
+.cycle-c::after {
+  right: -10px;
+}
+
+.cycle-b::after {
+  left: -10px;
 }
 
 @layer components {
@@ -178,15 +197,56 @@ a {
 
   .lightcycle {
     position: absolute;
-    width: 120px;
-    height: 2px;
+    width: 70px;
+    height: 1.5px;
     border-radius: 2px;
     background: var(--tron-primary-strong);
     box-shadow:
       0 0 10px var(--tron-glow),
       0 0 22px var(--tron-glow);
 
+    offset-rotate: auto;
+    animation: ridePath 12s linear infinite;
     opacity: 0.8;
+    filter: drop-shadow(0 0 6px var(--tron-glow));
+  }
+
+  .lightcycle::before {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 10px;
+    height: 6px;
+    border-radius: 6px;
+
+    background: var(--tron-primary-strong);
+
+    box-shadow:
+      0 0 8px var(--tron-glow),
+      0 0 18px var(--tron-glow),
+      0 0 28px var(--tron-glow);
+  }
+
+  .lightcycle::after {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 14px;
+    height: 14px;
+
+    border-radius: 50%;
+
+    border: 2px solid var(--tron-primary-strong);
+
+    box-shadow:
+      0 0 10px var(--tron-glow),
+      inset 0 0 6px var(--tron-glow);
   }
 
   .neon-title {
@@ -197,12 +257,12 @@ a {
 
   .neon-panel {
     border-radius: 1rem;
-    border: 1px solid rgba(0, 242, 255, 0.4);
+    border: 1px solid rgba(0, 242, 255, 0.5);
     background: linear-gradient(
       160deg,
-      rgba(4, 12, 22, 0.74) 0%,
-      rgba(10, 10, 10, 0.82) 62%,
-      rgba(8, 18, 28, 0.82) 100%
+      rgba(4, 12, 22, 0.4) 0%,   /* más transparente */
+      rgba(10, 10, 10, 0.48) 62%,
+      rgba(8, 18, 28, 0.48) 100%
     );
     box-shadow:
       inset 0 0 38px rgba(0, 242, 255, 0.08),
@@ -210,6 +270,40 @@ a {
       0 0 64px rgba(255, 140, 0, 0.1);
     backdrop-filter: blur(3px);
     animation: panelBreath 3.2s ease-in-out infinite;
+  }
+
+  /* H1 efecto Tron*/
+  .landing-tron-title {
+    font-family: "JetBrains Mono", "Share Tech Mono", monospace; /* futurista */
+    font-weight: 800;
+    font-size: 4rem; /* ajustable */
+    text-transform: uppercase;
+    color: #0ff; /* base cyan */
+    text-align: center;
+    text-shadow:
+      0 0 6px rgba(0,242,255,0.8),
+      0 0 12px rgba(0,242,255,0.6),
+      0 0 18px rgba(0,242,255,0.4);
+    letter-spacing: 0.16em;
+    background: none; /* sin banda */
+    margin: 0; /* no desplaza */
+    padding: 0;
+    line-height: 1;
+    position: relative; /* o absolute si quieres flotar sobre panel */
+    z-index: 20; /* sobre fondo pero debajo de otros elementos si hace falta */
+    animation: pulseBlue 1.6s ease-in-out infinite;
+  }
+
+  @media (min-width: 640px) {
+    .landing-tron-title {
+      font-size: 4rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-tron-title {
+      font-size: 4.5rem;
+    }
   }
 
   .neon-button {
