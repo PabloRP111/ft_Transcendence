@@ -13,8 +13,10 @@
 import dotenv from 'dotenv';
 dotenv.config(); // must run before anything reads process.env
 
+import http from 'http';
 import app from './app';
 import { runMigrations } from './db/migrate';
+import { attachSocketIO } from './socket';
 
 const PORT = process.env.PORT ?? 3003;
 
@@ -23,8 +25,23 @@ async function start(): Promise<void> {
   // This will throw (and crash the process) if the DB is unreachable.
   await runMigrations();
 
-  // Step 2: start accepting HTTP requests only after migrations succeed.
-  const server = app.listen(PORT, () => {
+  // Step 2: create an HTTP server explicitly (instead of app.listen).
+  //
+  // Why? Socket.IO needs to share the same TCP port as Express.
+  // WebSocket connections start as HTTP "upgrade" requests — Socket.IO intercepts
+  // them on the same server before they reach Express.
+  //
+  // Previously:  app.listen(PORT) — Express created the server internally.
+  // Now:         http.createServer(app) — we create it, then hand it to both Express and Socket.IO.
+  const server = http.createServer(app);
+
+  // Step 3: attach Socket.IO to the HTTP server (namespace /chat).
+  // This must happen before server.listen() so Socket.IO is ready when the first
+  // socket connection arrives.
+  attachSocketIO(server);
+
+  // Step 4: start accepting connections.
+  server.listen(PORT, () => {
     console.log(`chat-service listening on port ${PORT}`);
   });
 
