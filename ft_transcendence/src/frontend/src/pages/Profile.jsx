@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { UserRound, Trophy, Cpu, LogOut, Pencil, Crown, Zap } from "lucide-react";
+import { UserRound, Trophy, Cpu, Pencil, Crown, Zap } from "lucide-react";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -35,14 +35,8 @@ export default function ProfilePage() {
     if (storedUser) setUsername(storedUser);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("transcendence_auth");
-    window.location.href = "/";
-  };
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-voidBlack font-mono text-cyan-50">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
@@ -52,7 +46,7 @@ export default function ProfilePage() {
       <Navbar />
 
       <motion.main
-        className="relative z-20 flex items-center justify-center px-6 py-16"
+        className="relative z-20 flex flex-1 items-center justify-center px-6 py-16"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -134,7 +128,7 @@ export default function ProfilePage() {
         </motion.section>
       </motion.main>
 
-
+      <Footer />
     </div>
   );
 }

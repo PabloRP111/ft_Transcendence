@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LogIn, UserPlus, LogOut } from "lucide-react";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import { login, logout } from "../api/auth.js";
 
 const containerVariants = {
@@ -55,15 +56,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-voidBlack font-mono text-cyan-50">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
         <div className="scanline-overlay" />
       </div>
 
+      <Navbar />
+
       <motion.main
-        className="relative z-20 flex items-center justify-center px-6 py-16"
+        className="relative z-20 flex flex-1 items-center justify-center px-6 py-16"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -139,6 +142,8 @@ export default function LoginPage() {
           )}
         </motion.section>
       </motion.main>
+
+      <Footer />
     </div>
   );
 }
