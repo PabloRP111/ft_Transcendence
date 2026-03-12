@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LogIn, UserPlus, UserRoundCog } from "lucide-react";
 import Button from "./Button.jsx";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const glitchHover = {
@@ -22,19 +22,14 @@ const glitchHover = {
 export default function Navbar() {
   const { isAuthenticated, logoutUser, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-      navigate("/");
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
+    await logoutUser();
+    navigate("/");
   };
 
-  // Mientras se resuelve el refresh token, se puede mostrar un navbar vacío o loading
-  if (loading)
-    return null;
+  if (loading) return null;
 
   return (
     <motion.header
@@ -44,27 +39,29 @@ export default function Navbar() {
       transition={{ duration: 0.55, ease: "easeOut" }}
     >
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        {/* Título clickeable */}
         <motion.span
-          className="neon-title text-xs uppercase tracking-[0.34em] text-cyan-100 sm:text-sm md:text-base"
+          className="neon-title text-xs uppercase tracking-[0.34em] text-cyan-100 sm:text-sm md:text-base cursor-pointer"
           whileHover={glitchHover}
+          onClick={() => navigate("/")}
         >
-          TRANSCENDENCE v21
+          TRANSCENDENCE
         </motion.span>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden text-[10px] uppercase tracking-[0.34em] text-cyan-100/70 lg:block">
-            USER SYSTEM
-          </span>
 
           {isAuthenticated ? (
             <>
-              <Button
-                to="/profile"
-                className="neon-profile-pulse text-[10px] sm:text-[11px]"
-                icon={<UserRoundCog size={16} />}
-              >
-                User Profile
-              </Button>
+              {/* Oculta botón de perfil si ya estamos en /profile */}
+              {location.pathname !== "/profile" && (
+                <Button
+                  to="/profile"
+                  className="neon-profile-pulse text-[10px] sm:text-[11px]"
+                  icon={<UserRoundCog size={16} />}
+                >
+                  User Profile
+                </Button>
+              )}
 
               <button
                 onClick={handleLogout}

@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
@@ -81,14 +81,14 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              className="bg-[#05070d]/70 border-[color:var(--tron-border)] rounded-md p-3 text-[color:var(--tron-text)] placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
             />
             <input
               type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-[#05070d]/70 border border-cyan-300/40 rounded-md p-3 text-cyan-50 placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              className="bg-[#05070d]/70 border-[color:var(--tron-border)] rounded-md p-3 text-[color:var(--tron-text)] placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-300"
             />
 
             <button
