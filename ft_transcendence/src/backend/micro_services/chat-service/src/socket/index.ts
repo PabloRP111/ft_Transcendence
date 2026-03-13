@@ -28,6 +28,7 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import pool from '../db/pool';
+import { isParticipant } from '../db/helpers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -79,6 +80,26 @@ async function getUserConversationIds(userId: string): Promise<string[]> {
     [userId],
   );
   return result.rows.map((r) => r.conversation_id);
+}
+
+/**
+ * hasStringField — type guard that checks a payload object has a non-empty string field.
+ *
+ * We use `unknown` for all incoming socket event payloads because clients are
+ * untrusted — they can send anything. This guard lets us safely narrow the type
+ * before reading specific fields.
+ *
+ * Example:
+ *   hasStringField(payload, 'conversationId') // true if payload.conversationId is a non-empty string
+ */
+function hasStringField(payload: unknown, field: string): boolean {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    field in payload &&
+    typeof (payload as Record<string, unknown>)[field] === 'string' &&
+    ((payload as Record<string, unknown>)[field] as string).trim() !== ''
+  );
 }
 
 /**
@@ -206,6 +227,165 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
         console.error(`[socket] failed to emit userOnline for ${userId}:`, err);
       }
     }
+
+    // ── joinConversation ─────────────────────────────────────────────────────
+    /**
+     * Client emits: { conversationId: string }
+     * Optional ACK callback: (result: { ok: boolean; error?: string }) => void
+     *
+     * What is a Socket.IO "room"?
+     *   A room is just a named group of sockets. When you call socket.join("abc"),
+     *   that socket subscribes to any event emitted to the "abc" room.
+     *   Rooms are identified by a string — we use conversation UUIDs.
+     *
+     * We check DB participation before joining. A user who is not in the
+     * conversation_participants table cannot join the room and will never
+     * receive messages from it.
+     *
+     * The optional ACK callback lets the client know immediately whether the
+     * join succeeded or why it failed, without needing a separate error event.
+     */
+    socket.on(
+      'joinConversation',
+      async (
+        payload: unknown,
+        ack?: (result: { ok: boolean; error?: string }) => void,
+      ) => {
+        if (!hasStringField(payload, 'conversationId')) {
+          ack?.({ ok: false, error: 'invalid payload: conversationId required' });
+          return;
+        }
+
+        const { conversationId } = payload as { conversationId: string };
+
+        try {
+          const allowed = await isParticipant(conversationId, userId);
+
+          if (!allowed) {
+            ack?.({ ok: false, error: 'not a participant in this conversation' });
+            return;
+          }
+
+          // socket.join(roomName) — adds this socket to the named room.
+          // After this call, chat.to(conversationId).emit(...) will reach this socket.
+          await socket.join(conversationId);
+          console.log(`[socket] user ${userId} joined room ${conversationId}`);
+          ack?.({ ok: true });
+        } catch (err) {
+          console.error('[socket] joinConversation error:', err);
+          ack?.({ ok: false, error: 'internal error' });
+        }
+      },
+    );
+
+    // ── leaveConversation ────────────────────────────────────────────────────
+    /**
+     * Client emits: { conversationId: string }
+     *
+     * Removes the socket from the room. The client will no longer receive
+     * `newMessage` events for this conversation until they join again.
+     * No DB write needed — this is purely a socket-level operation.
+     */
+    socket.on('leaveConversation', (payload: unknown) => {
+      if (!hasStringField(payload, 'conversationId')) return;
+
+      const { conversationId } = payload as { conversationId: string };
+      socket.leave(conversationId);
+      console.log(`[socket] user ${userId} left room ${conversationId}`);
+    });
+
+    // ── sendMessage ──────────────────────────────────────────────────────────
+    /**
+     * Client emits: { conversationId: string, content: string }
+     *
+     * "Persist before emit" invariant (from CLAUDE.md):
+     *   The message MUST be written to the DB successfully before we broadcast it.
+     *   This guarantees that reconnecting clients can always fetch the full
+     *   history via GET /conversations/:id/messages.
+     *
+     * Success flow:
+     *   1. Validate payload
+     *   2. Verify the sender is a participant (access control)
+     *   3. INSERT into messages table
+     *   4. Broadcast `newMessage` to the conversation room
+     *      (sender receives it too if they've joined the room — keeps clients in sync)
+     *
+     * Failure flow:
+     *   - Any error → emit `messageFailed` to the sender only (no broadcast)
+     *   - `newMessage` is NEVER emitted if the DB write didn't succeed
+     *
+     * The `newMessage` payload shape matches the REST response exactly so the
+     * client can use the same data model for both HTTP history and real-time events.
+     */
+    socket.on('sendMessage', async (payload: unknown) => {
+      if (!hasStringField(payload, 'conversationId') || !hasStringField(payload, 'content')) {
+        socket.emit('messageFailed', { error: 'invalid payload: conversationId and content required' });
+        return;
+      }
+
+      const { conversationId, content } = payload as { conversationId: string; content: string };
+
+      // ── Access control ──────────────────────────────────────────────────────
+      try {
+        const allowed = await isParticipant(conversationId, userId);
+        if (!allowed) {
+          socket.emit('messageFailed', {
+            conversationId,
+            error: 'not a participant in this conversation',
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('[socket] sendMessage participant check error:', err);
+        socket.emit('messageFailed', { conversationId, error: 'internal error' });
+        return;
+      }
+
+      // ── Persist to DB, then broadcast ──────────────────────────────────────
+      try {
+        /*
+         * INSERT the message. We use RETURNING to get back all fields in one
+         * round-trip — no need for a separate SELECT after the insert.
+         */
+        const result = await pool.query<{
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          content: string;
+          created_at: string;
+          edited_at: string | null;
+        }>(
+          `INSERT INTO messages (conversation_id, sender_id, content)
+           VALUES ($1, $2, $3)
+           RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
+          [conversationId, userId, content.trim()],
+        );
+
+        const msg = result.rows[0];
+
+        // Build the message object — same camelCase shape as the REST endpoint.
+        // This consistency means the frontend can handle both HTTP and socket
+        // messages with the same code.
+        const newMessage = {
+          id: msg.id,
+          conversationId: msg.conversation_id,
+          senderId: msg.sender_id,
+          content: msg.content,
+          createdAt: msg.created_at,
+          editedAt: msg.edited_at,
+        };
+
+        // Broadcast to the room — every socket that called joinConversation for
+        // this conversation (including the sender) will receive `newMessage`.
+        chat.to(conversationId).emit('newMessage', newMessage);
+        console.log(`[socket] message ${msg.id} persisted and broadcast to room ${conversationId}`);
+      } catch (err) {
+        // DB write failed — notify sender only, do NOT broadcast.
+        // The "no partial state" rule: either everyone gets the message or nobody does.
+        console.error(`[socket] sendMessage DB error for conversation ${conversationId}:`, err);
+        socket.emit('messageFailed', { conversationId, error: 'failed to persist message' });
+      }
+    });
 
     // ── Disconnect handler ────────────────────────────────────────────────────
     /**
