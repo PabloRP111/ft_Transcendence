@@ -7,6 +7,7 @@ import Login from "./pages/Login.jsx";
 import Profile from "./pages/Profile.jsx";
 import Landing from "./pages/Landing.jsx";
 import Game from "./pages/Game.jsx";
+import Credits from "./pages/Credits.jsx";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
           </Route>
           <Route path="/game" element={<Game />} />
+          <Route path="/credits" element={<Credits />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
