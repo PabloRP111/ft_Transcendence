@@ -48,6 +48,33 @@ interface SocketData {
   userId: string;
 }
 
+// ─── Module-level namespace reference ────────────────────────────────────────
+
+/**
+ * chatNamespace — the Socket.IO /chat namespace, stored at module scope.
+ *
+ * Why store it here?
+ *   REST route handlers (e.g. PATCH /messages/:id) need to emit socket events
+ *   after a successful DB write. But route handlers don't have direct access to
+ *   the Socket.IO server — they're wired up through Express, separately from Socket.IO.
+ *
+ *   By storing the namespace here and exporting a getter, any module can call
+ *   getChatNamespace() to emit events without needing the full io instance passed
+ *   around through every layer of the app.
+ *
+ * It's set once when attachSocketIO() runs (before the server starts accepting
+ * requests), so it's always populated by the time any route handler runs.
+ */
+let chatNamespace: ReturnType<InstanceType<typeof SocketServer>['of']> | null = null;
+
+/**
+ * getChatNamespace — returns the /chat namespace for emitting events from outside the socket layer.
+ * Returns null if called before attachSocketIO() — should never happen in practice.
+ */
+export function getChatNamespace(): ReturnType<InstanceType<typeof SocketServer>['of']> | null {
+  return chatNamespace;
+}
+
 // ─── In-memory presence map ───────────────────────────────────────────────────
 
 /**
@@ -141,6 +168,9 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
   // ── /chat namespace ──────────────────────────────────────────────────────────
   // All chat events live under /chat. Clients connect with: io("/chat", { auth: { token } })
   const chat = io.of('/chat');
+
+  // Store in module scope so REST route handlers can emit events via getChatNamespace()
+  chatNamespace = chat;
 
   // ── Handshake middleware ─────────────────────────────────────────────────────
   /**
@@ -385,6 +415,37 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
         console.error(`[socket] sendMessage DB error for conversation ${conversationId}:`, err);
         socket.emit('messageFailed', { conversationId, error: 'failed to persist message' });
       }
+    });
+
+    // ── typingStart / typingStop ─────────────────────────────────────────────
+    /**
+     * Client emits: { conversationId: string }
+     *
+     * These are ephemeral presence hints — they are NOT persisted to the DB.
+     * The server simply rebroadcasts them to the conversation room, excluding
+     * the sender (no one needs to see their own "typing..." indicator).
+     *
+     * Why `socket.to(room)` instead of `chat.to(room)`?
+     *   `chat.to(room).emit(...)` — sends to ALL sockets in the room, including sender.
+     *   `socket.to(room).emit(...)` — sends to all sockets in the room EXCEPT the sender.
+     *   For typing indicators we always want to exclude the sender.
+     *
+     * The payload forwarded to other clients includes `userId` so the UI
+     * knows whose name to display in the "Alice is typing..." indicator.
+     */
+    socket.on('typingStart', (payload: unknown) => {
+      if (!hasStringField(payload, 'conversationId')) return;
+
+      const { conversationId } = payload as { conversationId: string };
+      // Rebroadcast to room, excluding this socket
+      socket.to(conversationId).emit('typingStart', { conversationId, userId });
+    });
+
+    socket.on('typingStop', (payload: unknown) => {
+      if (!hasStringField(payload, 'conversationId')) return;
+
+      const { conversationId } = payload as { conversationId: string };
+      socket.to(conversationId).emit('typingStop', { conversationId, userId });
     });
 
     // ── Disconnect handler ────────────────────────────────────────────────────

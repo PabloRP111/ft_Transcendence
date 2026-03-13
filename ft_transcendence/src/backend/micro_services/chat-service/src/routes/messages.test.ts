@@ -218,3 +218,105 @@ describe('GET /conversations/:conversationId/messages', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ─── PATCH /conversations/:id/messages/:messageId ─────────────────────────────
+
+describe('PATCH /conversations/:conversationId/messages/:messageId', () => {
+  /** Sends a message and returns its full body. */
+  async function postMessage(
+    convId: string,
+    content: string,
+    userId = USER_A,
+  ): Promise<{ id: string; content: string; editedAt: string | null }> {
+    const res = await request(app)
+      .post(`/conversations/${convId}/messages`)
+      .set('Authorization', makeToken(userId))
+      .send({ content });
+
+    return res.body as { id: string; content: string; editedAt: string | null };
+  }
+
+  it('returns 200 and the updated message when the owner edits it', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'original content');
+
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_A))
+      .send({ content: 'edited content' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(msg.id);
+    expect(res.body.content).toBe('edited content');
+    // editedAt must now be set — was null before the edit
+    expect(res.body.editedAt).not.toBeNull();
+  });
+
+  it('sets edited_at in the DB after a successful edit', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'will be edited');
+
+    await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_A))
+      .send({ content: 'now edited' });
+
+    // Query the DB directly to confirm edited_at was persisted
+    const result = await pool.query(
+      'SELECT content, edited_at FROM messages WHERE id = $1',
+      [msg.id],
+    );
+    expect(result.rows[0].content).toBe('now edited');
+    expect(result.rows[0].edited_at).not.toBeNull();
+  });
+
+  it('returns 403 when a non-owner participant tries to edit', async () => {
+    const convId = await createConversation();
+    // USER_A sends the message
+    const msg = await postMessage(convId, 'user A message');
+
+    // USER_B is a participant but did not send this message
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_B))
+      .send({ content: 'user B trying to edit' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 403 when a non-participant tries to edit', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'some message');
+
+    // USER_C was never added to this conversation
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_C))
+      .send({ content: 'outsider edit attempt' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 for an empty content string', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'original');
+
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_A))
+      .send({ content: '   ' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 401 with no token', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'original');
+
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .send({ content: 'no auth edit' });
+
+    expect(res.status).toBe(401);
+  });
+});
