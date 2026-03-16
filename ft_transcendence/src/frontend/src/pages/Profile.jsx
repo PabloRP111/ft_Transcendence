@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { UserRound, Trophy, Cpu, LogOut, Pencil, Crown, Zap } from "lucide-react";
+import { UserRound, Trophy, Cpu, Pencil, Crown, Zap } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
+import { getCurrentUser } from "../api/users";
+import { useAuth } from "../context/AuthContext";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,25 +30,59 @@ const itemVariants = {
 };
 
 export default function ProfilePage() {
-  const [username, setUsername] = useState("PlayerOne");
+  const { accessToken, loading } = useAuth();
+  const [profile, setProfile] = useState({
+    username: "",
+    wins: 0,
+    matches: 0,
+    score: 0,
+    rank: 0,
+  });
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("username");
-    if (storedUser) setUsername(storedUser);
-  }, []);
+    const fetchCurrentUser = async () => {
+      if (loading) {
+        return;
+      }
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("transcendence_auth");
-    window.location.href = "/";
-  };
+      try {
+        if (accessToken) {
+          const currentUser = await getCurrentUser(accessToken);
+          if (currentUser && currentUser.username) {
+            setProfile({
+              username: currentUser.username,
+              wins: Number(currentUser.wins ?? 0),
+              matches: Number(currentUser.matches ?? 0),
+              score: Number(currentUser.score ?? 0),
+              rank: Number(currentUser.rank ?? 0),
+            });
+            localStorage.setItem("username", currentUser.username);
+            return;
+          }
+        }
+
+        const storedUser = localStorage.getItem("username");
+        if (storedUser) {
+          setProfile((prev) => ({ ...prev, username: storedUser }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch current user profile:", err);
+        const storedUser = localStorage.getItem("username");
+        if (storedUser) {
+          setProfile((prev) => ({ ...prev, username: storedUser }));
+        }
+      }
+    };
+
+    fetchCurrentUser();
+  }, [accessToken, loading]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
-        
+
         <LightCycles />
 
         <div className="scanline-overlay" />
@@ -80,7 +116,7 @@ export default function ProfilePage() {
             variants={itemVariants}
             className="neon-title text-4xl uppercase tracking-[0.16em] text-gridBlue"
           >
-            {username}
+            {profile.username || "UNKNOWN USER"}
           </motion.h1>
 
           <motion.p
@@ -101,7 +137,7 @@ export default function ProfilePage() {
                   Wins
                 </span>
               </div>
-              <p className="text-3xl">24</p>
+              <p className="text-3xl">{profile.wins}</p>
             </div>
 
             <div className="rounded-xl border border-cyan-300/30 p-6">
@@ -111,7 +147,7 @@ export default function ProfilePage() {
                   Matches
                 </span>
               </div>
-              <p className="text-3xl">57</p>
+              <p className="text-3xl">{profile.matches}</p>
             </div>
 
             <div className="rounded-xl border border-cyan-300/30 p-6">
@@ -121,7 +157,7 @@ export default function ProfilePage() {
                   Score
                 </span>
               </div>
-              <p className="text-3xl">200</p>
+              <p className="text-3xl">{profile.score}</p>
             </div>
 
             <div className="rounded-xl border border-cyan-300/30 p-6">
@@ -131,7 +167,7 @@ export default function ProfilePage() {
                   Rank
                 </span>
               </div>
-              <p className="text-3xl">10</p>
+              <p className="text-3xl">{profile.rank}</p>
             </div>
           </motion.div>
         </motion.section>

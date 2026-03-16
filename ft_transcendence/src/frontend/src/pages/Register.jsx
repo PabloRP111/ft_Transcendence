@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { UserPlus, LogIn } from "lucide-react";
-import { register } from "../api/auth.js";
+import { login, register } from "../api/auth.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
@@ -17,6 +18,7 @@ const itemVariants = {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { loginUser } = useAuth();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -24,15 +26,27 @@ export default function RegisterPage() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setMsg("");
+
     try {
       const res = await register({ email, username, password });
       if (res.error) {
         setMsg(res.error);
         return;
       }
-      setMsg("Registration successful! You can now login.");
-      // Opcional: redirigir al login automáticamente
-      // navigate("/login");
+
+      const loginData = await login({ email, password });
+      if (loginData.error) {
+        setMsg(loginData.error);
+        return;
+      }
+
+      if (loginData.username) {
+        localStorage.setItem("username", loginData.username);
+      }
+
+      loginUser(loginData.accessToken);
+      navigate("/");
     } catch (err) {
       setMsg("Fetch failed: " + err.message);
     }

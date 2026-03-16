@@ -84,7 +84,10 @@ router.post("/login", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    return res.json({ accessToken });
+    return res.json({
+      accessToken,
+      username: data.username
+    });
 
   } catch (error) {
     console.error("Communication Error:", error);
