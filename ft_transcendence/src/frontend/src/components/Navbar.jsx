@@ -77,7 +77,7 @@ export default function Navbar() {
                 className="text-[10px] sm:text-[11px]"
                 icon={<LogIn size={16} />}
               >
-                System Access
+                Login
               </Button>
               <Button
                 to="/register"
@@ -85,7 +85,7 @@ export default function Navbar() {
                 className="text-[10px] sm:text-[11px]"
                 icon={<UserPlus size={16} />}
               >
-                Identity Sync
+                Register
               </Button>
             </>
           )}

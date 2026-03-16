@@ -2,6 +2,7 @@ import { motion } from "framer-motion"; //animations
 import { Cpu } from "lucide-react"; //icons
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
+import LightCycles from "../components/LightCycles";
 import ChatModule from "../components/ChatModule.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -36,6 +37,9 @@ return (
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        
+        <LightCycles />
+
         <div className="scanline-overlay" />
       </div>
       <Navbar />
@@ -54,7 +58,7 @@ return (
       )}
 
       <motion.main
-        className="relative z-20 flex flex-1 min-h-[calc(100vh-176px)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
+        className="relative z-20 flex flex-col flex-1 min-h-[calc(100vh-176px)] items-center justify-start px-4 pt-16 sm:px-6 lg:px-8"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -92,8 +96,16 @@ return (
             Arena Core Online
           </motion.div>
         </motion.section>
-      </motion.main>
 
+        <motion.h1
+          className="landing-tron-title mt-50 sm:mt-52" // mucho más abajo
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.2 }}
+        >
+          TRON GAME
+        </motion.h1>
+      </motion.main>
       <Footer />
     </div>
   );
