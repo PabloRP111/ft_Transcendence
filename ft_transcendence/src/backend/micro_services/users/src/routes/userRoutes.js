@@ -85,7 +85,7 @@ router.get("/:id", async (req, res) => {
   try {
 
     const result = await pool.query(
-      `SELECT id, email, username FROM users WHERE id = $1`,
+      `SELECT id, email, username, wins, matches, score, rank FROM users WHERE id = $1`,
       [req.params.id]
     );
 

@@ -55,17 +55,3 @@ export async function logout() {
   return res.json();
 }
 
-export async function me(accessToken) {
-  const res = await fetch(`${BASE_URL}/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text);
-  }
-
-  return res.json();
-}
-

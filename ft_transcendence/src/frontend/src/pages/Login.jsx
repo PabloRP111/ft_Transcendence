@@ -39,6 +39,10 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.username) {
+        localStorage.setItem("username", data.username);
+      }
+
       loginUser(data.accessToken);
       navigate("/");
 
