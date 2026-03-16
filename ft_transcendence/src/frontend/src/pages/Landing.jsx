@@ -37,9 +37,7 @@ return (
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
-        
         <LightCycles />
-
         <div className="scanline-overlay" />
       </div>
       <Navbar />

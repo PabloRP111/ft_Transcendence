@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { UserRound } from "lucide-react";
+import Navbar from "../components/Navbar.jsx";
+import LightCycles from "../components/LightCycles";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -38,8 +40,10 @@ export default function CreditsPage() {
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
+        <LightCycles />
         <div className="scanline-overlay" />
       </div>
+      <Navbar />
 
       <motion.main
         className="relative z-20 flex min-h-screen items-center justify-center px-10"
