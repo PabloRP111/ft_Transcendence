@@ -56,7 +56,7 @@ export default function Navbar() {
               {location.pathname !== "/profile" && (
                 <Button
                   to="/profile"
-                  className="neon-profile-pulse text-[10px] sm:text-[11px]"
+                  className="text-[10px] sm:text-[11px]"
                   icon={<UserRoundCog size={16} />}
                 >
                   User Profile
