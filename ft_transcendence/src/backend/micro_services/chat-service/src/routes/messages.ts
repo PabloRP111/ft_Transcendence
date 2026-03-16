@@ -24,6 +24,7 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/pool';
 import { isParticipant } from '../db/helpers';
+import { getChatNamespace } from '../socket';
 
 const router = Router();
 
@@ -188,5 +189,108 @@ router.get('/:conversationId/messages', async (req: Request, res: Response): Pro
     res.status(500).json({ error: 'internal server error' });
   }
 });
+
+// ─── PATCH /conversations/:conversationId/messages/:messageId ─────────────────
+
+/**
+ * Edit a message.
+ *
+ * Rules:
+ *   - The caller must be a participant in the conversation (403 if not)
+ *   - The caller must be the original sender of the message (403 if not)
+ *   - Only `content` can be changed; `edited_at` is set automatically by the DB
+ *
+ * After a successful DB update, we emit `messageEdited` to the conversation room
+ * via Socket.IO so all connected clients get the change in real time.
+ *
+ * Why check isParticipant AND sender ownership separately?
+ *   isParticipant confirms the user belongs to the conversation.
+ *   Sender ownership confirms they own this specific message.
+ *   Both are needed — a participant should not be able to edit other people's messages.
+ *
+ * Response shape: same as the message object returned by POST and GET.
+ */
+router.patch(
+  '/:conversationId/messages/:messageId',
+  async (req: Request, res: Response): Promise<void> => {
+    const { conversationId, messageId } = req.params;
+    const { content } = req.body as { content: unknown };
+
+    // ── Validation ────────────────────────────────────────────────────────────
+    if (typeof content !== 'string' || content.trim() === '') {
+      res.status(400).json({ error: 'content must be a non-empty string' });
+      return;
+    }
+
+    // ── Participant check ─────────────────────────────────────────────────────
+    const allowed = await isParticipant(conversationId, req.userId);
+    if (!allowed) {
+      res.status(403).json({ error: 'not a participant in this conversation' });
+      return;
+    }
+
+    // ── Update with ownership check ───────────────────────────────────────────
+    try {
+      /*
+       * UPDATE ... WHERE id = $1 AND sender_id = $2
+       *
+       * By including sender_id = req.userId in the WHERE clause, we enforce
+       * ownership in a single query: if the message exists but belongs to someone
+       * else, zero rows are updated and we return 403.
+       *
+       * NOW() sets edited_at to the current timestamp on the DB server,
+       * ensuring consistent time regardless of the application server's clock.
+       */
+      const result = await pool.query<{
+        id: string;
+        conversation_id: string;
+        sender_id: string;
+        content: string;
+        created_at: string;
+        edited_at: string;
+      }>(
+        `UPDATE messages
+         SET content   = $1,
+             edited_at = NOW()
+         WHERE id          = $2
+           AND conversation_id = $3
+           AND sender_id   = $4
+         RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
+        [content.trim(), messageId, conversationId, req.userId],
+      );
+
+      // Zero rows updated means either the message doesn't exist or caller isn't the sender
+      if (result.rowCount === 0) {
+        res.status(403).json({ error: 'not the sender of this message' });
+        return;
+      }
+
+      const msg = result.rows[0];
+
+      const editedMessage = {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        senderId: msg.sender_id,
+        content: msg.content,
+        createdAt: msg.created_at,
+        editedAt: msg.edited_at,
+      };
+
+      // ── Emit messageEdited to socket room ─────────────────────────────────
+      // All clients currently in the conversation room receive the updated message.
+      // getChatNamespace() may return null if Socket.IO isn't attached (e.g. in
+      // some test environments) — we skip the emit gracefully in that case.
+      const chat = getChatNamespace();
+      if (chat) {
+        chat.to(conversationId).emit('messageEdited', editedMessage);
+      }
+
+      res.json(editedMessage);
+    } catch (err) {
+      console.error('[PATCH /messages] error:', err);
+      res.status(500).json({ error: 'internal server error' });
+    }
+  },
+);
 
 export default router;

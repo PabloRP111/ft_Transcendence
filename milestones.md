@@ -157,6 +157,22 @@ Ordered build plan. The service must be runnable at every step. Minimize schema 
 
 ---
 
+## Frontend
+
+**When to start:** After M6 is complete. By that point the full backend contract is stable (all REST endpoints + all socket events defined and tested), so the frontend won't need to chase a moving target.
+
+**Stack:** React + Vite + Tailwind + TypeScript, Zustand (state), Socket.IO client (namespace `/chat`).
+
+**What to build:**
+- Conversations list (calls `GET /conversations`)
+- Message history view (calls `GET /conversations/:id/messages`)
+- Real-time send/receive (`sendMessage` / `newMessage` socket events)
+- Typing indicators (`typingStart` / `typingStop`)
+
+M7–M10 (typing, editing, hardening, verification) are small and self-contained — they can run in parallel with frontend work.
+
+---
+
 ## Summary
 
 | # | Focus | REST | Socket | DB | Key invariant |
@@ -167,7 +183,7 @@ Ordered build plan. The service must be runnable at every step. Minimize schema 
 | M3 | Conversations | CRUD | — | read/write | participant isolation |
 | M4 | Messages | CRUD + pagination | — | read/write | offline delivery works |
 | M5 | Socket auth | — | connect/disconnect | — | presence is server-driven |
-| M6 | Real-time send | — | send/receive | write | persist before emit |
+| M6 | Real-time send | — | send/receive | write | persist before emit | ← start frontend here |
 | M7 | Typing | — | ephemeral | — | no persistence |
 | M8 | Editing | PATCH | messageEdited | write | ownership check |
 | M9 | Hardening | validation | rate limit | — | no silent failures |
