@@ -1,2 +1,3 @@
 CREATE DATABASE users_db;
 CREATE DATABASE gateway_db;
+CREATE DATABASE chat_db;

@@ -8,7 +8,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY tsconfig.json ./
+COPY tsconfig.build.json ./
 COPY src/ ./src/
+COPY migrations/ ./migrations/
 
 RUN npm run build 
 
@@ -24,6 +26,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/migrations ./migrations
 
 EXPOSE 3003
 
