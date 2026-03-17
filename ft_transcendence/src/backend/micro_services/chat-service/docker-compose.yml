@@ -4,6 +4,8 @@ services:
   # Start full stack (DB + containerised service):
   #   docker compose --profile full up
 
+#no sense in keeping chat-db service now, because centralized container now
+#only keeping if i need it for local testing
   chat-db:
     image: postgres:15-alpine
     environment:
