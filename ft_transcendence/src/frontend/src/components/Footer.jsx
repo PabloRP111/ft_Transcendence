@@ -1,5 +1,6 @@
 import { ShieldCheck, ShieldEllipsis } from "lucide-react"; 
 import Button from "./Button.jsx";
+import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -21,16 +22,15 @@ export default function Footer() {
           [ Welcome to the Tron Matrix v1.0 ]
         </p>
 
-        {/* Navegación Derecha - Gap más pequeño entre links */}
-        <nav className="flex flex-1 items-center justify-end gap-4">
-          <a href="#terms" className="subroutine-link flex items-center gap-1.5 text-[10px] uppercase tracking-tighter text-cyan-100/40 hover:text-cyan-400 transition-all">
-            <ShieldCheck size={12} /> {/* Icono un pelín más pequeño */}
-            <span>Terms</span>
-          </a>
-          <a href="#privacy" className="subroutine-link flex items-center gap-1.5 text-[10px] uppercase tracking-tighter text-cyan-100/40 hover:text-cyan-400 transition-all">
-            <ShieldEllipsis size={12} />
-            <span>Privacy</span>
-          </a>
+        <nav className="flex items-center gap-4 sm:gap-5">
+          <Link to="/terms" className="subroutine-link">
+            <ShieldCheck size={14} />
+            Terms &amp; Conditions
+          </Link>
+          <Link to="/privacy" className="subroutine-link">
+            <ShieldEllipsis size={14} />
+            Privacy Policy
+          </Link>
         </nav>
       </div>
     </footer>
