@@ -6,11 +6,13 @@ const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
 // token corto (login normal)
-export function generateAccessToken(userId) {
+export function generateAccessToken(userId, sessionId) {
   const expMs = Date.now() + 15 * 60 * 1000; // 15 min
 
   const token = jwt.sign(
-    { id: userId, expMs },
+    { id: userId, 
+      session_id: sessionId,
+      expMs },
     ACCESS_SECRET,
     { expiresIn: "15m" }
   );
@@ -26,7 +28,7 @@ export function generateRefreshToken(userId, username, sessionId) {
     {
       id: userId,
       username,
-      sid: sessionId,
+      session_id: sessionId,
       expMs
     },
     REFRESH_SECRET,

@@ -41,10 +41,6 @@ export default function RegisterPage() {
         return;
       }
 
-      if (loginData.username) {
-        localStorage.setItem("username", loginData.username);
-      }
-
       loginUser(loginData.accessToken);
       navigate("/");
     } catch (err) {

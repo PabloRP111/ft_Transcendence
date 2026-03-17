@@ -68,7 +68,7 @@ router.post("/login", async (req, res) => {
 
     // generar tokens
     const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username, sessionId);
-    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id);
+    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id, sessionId);
 
     // almacenar sesión
     await storeSession(data.id, {
@@ -109,16 +109,14 @@ router.post("/refresh", async (req, res) => {
 
   try {
     const session = await findSessionByUser(refreshPayload.id);
-    if (!session) return res.status(401).json({ error: "No active session" });
-
-    console.log("JWT refresh exp:", refreshPayload.expMs);
-    console.log("DB refresh exp:", session.refresh_expires_at);
+    if (!session)
+      return res.status(401).json({ error: "No active session" });
 
     // verificar que la sesión coincide con la de la base de datos
-    if (refreshPayload.sid !== session.session_id)
+    if (refreshPayload.session_id !== session.session_id)
       return res.status(401).json({ error: "Session replaced" });
 
-    const { token: newAccess, expMs: newAccessExp } = generateAccessToken(refreshPayload.id);
+    const { token: newAccess, expMs: newAccessExp } = generateAccessToken(refreshPayload.id, session.session_id);
 
     // actualizar solo last_access_expires_at
     await storeSession(refreshPayload.id, {
