@@ -53,8 +53,6 @@ export default function CreditsPage() {
       >
 
         <div className="flex flex-col items-center gap-16">
-
-          {/* TITLE */}
           <motion.h1
             variants={itemVariants}
             className="neon-title text-4xl tracking-[0.2em] text-gridBlue text-center"

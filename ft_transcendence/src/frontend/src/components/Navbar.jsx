@@ -39,7 +39,6 @@ export default function Navbar() {
       transition={{ duration: 0.55, ease: "easeOut" }}
     >
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        {/* Título clickeable */}
         <motion.span
           className="neon-title text-xs uppercase tracking-[0.34em] text-cyan-100 sm:text-sm md:text-base cursor-pointer"
           whileHover={glitchHover}

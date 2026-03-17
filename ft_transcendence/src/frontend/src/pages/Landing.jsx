@@ -42,11 +42,6 @@ return (
       </div>
       <Navbar />
 
-		{/* MODULAR CHAT INJECTION 
-          - 'fixed left-0 top-24 bottom-12': Sticks to the left and spans the space between Nav and Footer.
-          - 'w-[calc(50vw-384px)]': Calculates the exact empty space to the left of the central panel (768px / 2 = 384px).
-          - 'flex items-center justify-center': Centers the ChatModule perfectly within that calculated box.
-      */}
       {!loading && isAuthenticated && (
         <aside className="fixed left-0 top-24 bottom-12 z-40 hidden lg:flex items-center justify-center w-[calc(50vw-384px)] px-4">
           <div className="w-full max-w-[320px] h-[60vh] max-h-[550px]">
@@ -63,32 +58,37 @@ return (
       >
         <motion.section
           variants={itemVariants}
-          className="neon-panel w-full max-w-3xl p-8 text-center sm:p-12"
+          className="neon-panel w-full max-w-3xl p-8 sm:p-10 text-center flex flex-col items-center gap-4"
         >
-          <motion.p
-            variants={itemVariants}
-            className="mb-5 text-[10px] uppercase tracking-[0.38em] text-cyan-100/80 sm:text-[11px]"
-          >
-            The Grid // Boot Sequence
-          </motion.p>
-
           <motion.h1
             variants={itemVariants}
-            className="neon-title text-4xl uppercase tracking-[0.16em] text-gridBlue sm:text-5xl md:text-6xl"
+            className="neon-title text-5xl sm:text-6xl md:text-6xl uppercase tracking-[0.04em]"
           >
-            ENTER THE ARENA.
+            ENTER THE ARENA
           </motion.h1>
-
-          <motion.p
-            variants={itemVariants}
-            className="mt-6 text-xs uppercase tracking-[0.24em] text-cyan-100/80 sm:text-sm md:text-base"
-          >
-            Awaiting Light Cycle Initialization...
-          </motion.p>
 
           <motion.div
             variants={itemVariants}
-            className="mt-10 inline-flex items-center gap-2 rounded-full border border-cyan-300/45 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-cyan-100/85"
+            className="mt-8 flex flex-col items-center gap-4 w-full max-w-xs sm:max-w-sm"
+          >
+            <button
+              onClick={() => window.location.href = "/online-game"}
+              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center"
+            >
+              ONLINE GAME
+            </button>
+
+            <button
+              onClick={() => window.location.href = "/ai-game"}
+              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center"
+            >
+              PLAY VS AI
+            </button>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/45 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-cyan-100/85"
           >
             <Cpu size={14} />
             Arena Core Online
@@ -96,8 +96,8 @@ return (
         </motion.section>
 
         <motion.h1
-          className="landing-tron-title mt-50 sm:mt-52" // mucho más abajo
-          initial={{ opacity: 0, y: -20 }}
+          className="landing-tron-title mt-10 sm:mt-28"
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, delay: 0.2 }}
         >
