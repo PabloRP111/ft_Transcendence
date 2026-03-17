@@ -1,4 +1,5 @@
 import { ShieldCheck, ShieldEllipsis } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
@@ -9,14 +10,14 @@ export default function Footer() {
         </p>
 
         <nav className="flex items-center gap-4 sm:gap-5">
-          <a href="#terms" className="subroutine-link">
+          <Link to="/terms" className="subroutine-link">
             <ShieldCheck size={14} />
             Terms &amp; Conditions
-          </a>
-          <a href="#privacy" className="subroutine-link">
+          </Link>
+          <Link to="/privacy" className="subroutine-link">
             <ShieldEllipsis size={14} />
             Privacy Policy
-          </a>
+          </Link>
         </nav>
       </div>
     </footer>
