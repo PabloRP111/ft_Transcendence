@@ -1,4 +1,5 @@
-COMPOSE=docker-compose -f ./src/docker-compose.yml
+DOCKER_BIN := $(shell which docker-compose 2>/dev/null || echo "docker compose")
+COMPOSE=$(DOCKER_BIN) -f ./src/docker-compose.yml
 
 all: up
 
@@ -22,9 +23,10 @@ reload: down up
 
 fclean: down
 	@echo "🧨 Borrando volúmenes del proyecto..."
-	@docker volume rm src_gateway_data src_users_data || true
+	@$(COMPOSE) down -v --rmi all --remove-orphans
+	@docker volume ls -q | xargs -r docker volume rm -f
 	@echo "🧹 Borrando imágenes del proyecto..."
-	@docker-compose -f ./src/docker-compose.yml build --no-cache
+	@$(DOCKER_BIN) -f ./src/docker-compose.yml build --no-cache
 	@docker images -q | xargs -r docker rmi -f
 	@echo "🗑 Borrando bases de datos locales..."
 	@rm -f ./src/backend/micro_services/users/users.db

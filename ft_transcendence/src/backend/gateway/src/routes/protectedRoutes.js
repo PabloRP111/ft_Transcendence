@@ -1,19 +1,29 @@
 import express from "express";
+import fetch from "node-fetch";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const USERS_SERVICE = process.env.USERS_SERVICE || "http://users:3002";
 
-router.get("/landing", (req, res) => {
-  res.json({
-    message: "Landing protegida",
-    user: req.user
-  });
-});
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+    if (!req.user)
+    return res.status(401).json({ error: "Unauthorized" });
 
-router.get("/me", (req, res) => {
-  res.json({
-    message: "Usuario autenticado",
-    user: req.user
-  });
+    const response = await fetch(`${USERS_SERVICE}/${req.user.id}`);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data?.error || "Failed to load user profile"
+      });
+    }
+
+    return res.json(data);
+  } catch (error) {
+    console.error("/me profile fetch failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
 });
 
 export default router;

@@ -8,52 +8,44 @@ import {
   deleteSession
 } from "../jwt.js";
 import fetch from "node-fetch";
+import { v4 as uuidv4 } from "uuid";
 
 const USERS_SERVICE = process.env.USERS_SERVICE || "http://users:3002";
 
 const router = express.Router();
 
+// REGISTER sigue igual
 router.post("/register", async (req, res) => {
   const { email, username, password } = req.body;
 
-  // Validación inicial
-  if (!email || !username || !password) {
+  if (!email || !username || !password)
     return res.status(400).json({ error: "Missing fields" });
-  }
 
   try {
-    // Llamada directa al microservicio de usuarios
     const response = await fetch(`${USERS_SERVICE}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, username, password }),
     });
-
-    // Intentamos parsear el JSON, si falla devolvemos null
     const data = await response.json().catch(() => null);
 
-    // Manejo de errores de la respuesta del servicio
     if (!response.ok) {
       console.error("Users service error:", data);
-      return res.status(response.status).json({ 
-        error: data?.error || "Users service failed" 
-      });
+      return res.status(response.status).json({ error: data?.error || "Users service failed" });
     }
 
-    // Éxito: Devolvemos los datos filtrados
     res.status(201).json({
       id: data.id,
       email: data.email,
       username: data.username,
     });
-
   } catch (err) {
-    // Errores de red o fallos inesperados
     console.error("Registration crash:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// LOGIN
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -66,18 +58,21 @@ router.post("/login", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok)
       return res.status(response.status).json(data);
 
-    // generar tokens
-    const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username);
-    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id);
+    // Generar session_id único por login
+    const sessionId = uuidv4();
 
-    // sesión global única (reemplaza la anterior)
+    // generar tokens
+    const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username, sessionId);
+    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id, sessionId);
+
+    // almacenar sesión
     await storeSession(data.id, {
+      session_id: sessionId,
       refresh_expires_at: refreshExp,
       last_access_expires_at: accessExp
     });
@@ -89,7 +84,10 @@ router.post("/login", async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    return res.json({ accessToken });
+    return res.json({
+      accessToken,
+      username: data.username
+    });
 
   } catch (error) {
     console.error("Communication Error:", error);
@@ -97,70 +95,56 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// REFRESH
 router.post("/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-  const accessToken = extractAccessToken(req);
-
-  if (!refreshToken || !accessToken)
-    return res.status(401).json({ error: "Missing tokens" });
+  if (!refreshToken) return res.status(401).json({ error: "Missing tokens" });
 
   let refreshPayload;
-  let accessPayload;
-
-  // verificar firma + expiración JWT
   try {
     refreshPayload = verifyRefreshToken(refreshToken);
-    accessPayload = verifyAccessToken(accessToken);
   } catch {
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 
   try {
     const session = await findSessionByUser(refreshPayload.id);
-
     if (!session)
       return res.status(401).json({ error: "No active session" });
 
-    // refresh debe ser el último emitido
-    if (refreshPayload.expMs !== session.refresh_expires_at)
+    // verificar que la sesión coincide con la de la base de datos
+    if (refreshPayload.session_id !== session.session_id)
       return res.status(401).json({ error: "Session replaced" });
 
-    // access debe ser el último emitido
-    if (accessPayload.expMs !== session.last_access_expires_at)
-      return res.status(401).json({ error: "Old access token" });
+    const { token: newAccess, expMs: newAccessExp } = generateAccessToken(refreshPayload.id, session.session_id);
 
-    // generar nuevo access token
-    const { token: newAccess, expMs: newAccessExp } =
-      generateAccessToken(refreshPayload.id);
-
-    // actualizar solo access expiry
+    // actualizar solo last_access_expires_at
     await storeSession(refreshPayload.id, {
+      session_id: session.session_id,
       refresh_expires_at: session.refresh_expires_at,
       last_access_expires_at: newAccessExp
     });
 
     return res.json({ accessToken: newAccess });
-
   } catch (err) {
     console.error("Refresh error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 });
 
+// LOGOUT
 router.post("/logout", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
-  
+
   if (refreshToken) {
     try {
       const decoded = verifyRefreshToken(refreshToken);
       await deleteSession(decoded.id);
     } catch (err) {
-      // token inválido o ya caducado, da igual: seguimos con logout
       console.error("Logout warning:", err);
     }
   }
 
-  // Limpiamos la cookie en el frontend
   res.clearCookie("refreshToken");
   res.json({ message: "Logged out" });
 });

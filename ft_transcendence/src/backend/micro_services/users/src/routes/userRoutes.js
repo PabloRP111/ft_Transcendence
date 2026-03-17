@@ -1,9 +1,9 @@
 import express from "express";
-import db from "../db.js";
+import pool from "../db.js";
 import bcrypt from "bcrypt";
-const SALT_ROUNDS = 10;
 
 const router = express.Router();
+const SALT_ROUNDS = 10;
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -13,86 +13,95 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Missing fields" });
 
   try {
-    // hash password
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
 
-    db.run(
-      "INSERT INTO users (email, username, password) VALUES (?, ?, ?)",
-      [email, username, hashed],
-      function (err) {
-        if (err) {
-          if (err.message.includes("UNIQUE"))
-            return res.status(409).json({ error: "User exists" });
-
-          return res.status(500).json({ error: "Database error" });
-        }
-
-        res.status(201).json({
-          id: this.lastID,
-          email,
-          username,
-          status: 200,
-        });
-      }
+    const result = await pool.query(
+      `INSERT INTO users (email, username, password)
+       VALUES ($1, $2, $3)
+       RETURNING id`,
+      [email, username, hashed]
     );
 
+    res.status(201).json({
+      id: result.rows[0].id,
+      email,
+      username,
+      status: 200
+    });
+
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+
+    if (err.code === "23505")
+      return res.status(409).json({ error: "User exists" });
+
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
   }
 });
 
+
 // LOGIN
 router.post("/login", async (req, res) => {
+
   const { email, password } = req.body;
 
   if (!email || !password)
     return res.status(400).json({ error: "Missing credentials" });
 
-  db.get(
-    "SELECT * FROM users WHERE email = ?",
-    [email],
-    async (err, user) => {
-      if (err)
-        return res.status(500).json({ error: "Database error" });
+  try {
 
-      if (!user)
-        return res.status(401).json({ error: "Invalid credentials" });
+    const result = await pool.query(
+      `SELECT * FROM users WHERE email = $1`,
+      [email]
+    );
 
-      try {
-        const valid = await bcrypt.compare(password, user.password);
+    const user = result.rows[0];
 
-        if (!valid)
-          return res.status(401).json({ error: "Invalid credentials" });
+    if (!user)
+      return res.status(401).json({ error: "Invalid credentials" });
 
-        res.json({
-          id: user.id,
-          email: user.email,
-          username: user.username,
-          status: 200,
-        });
+    const valid = await bcrypt.compare(password, user.password);
 
-      } catch {
-        res.status(500).json({ error: "Server error" });
-      }
-    }
-  );
+    if (!valid)
+      return res.status(401).json({ error: "Invalid credentials" });
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      status: 200
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
-// GET USER BY ID
-router.get("/:id", (req, res) => {
-  db.get(
-    "SELECT id, email, username FROM users WHERE id = ?",
-    [req.params.id],
-    (err, user) => {
-      if (err)
-        return res.status(500).json({ error: "Database error" });
 
-      if (!user)
-        return res.status(404).json({ error: "User not found" });
+// GET USER
+router.get("/:id", async (req, res) => {
 
-      res.json(user);
-    }
-  );
+  try {
+
+    const result = await pool.query(
+      `SELECT id, email, username, wins, matches, score, rank FROM users WHERE id = $1`,
+      [req.params.id]
+    );
+
+    const user = result.rows[0];
+
+    if (!user)
+      return res.status(404).json({ error: "User not found" });
+
+    res.json(user);
+
+  } catch (err) {
+
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+
+  }
 });
 
 export default router;

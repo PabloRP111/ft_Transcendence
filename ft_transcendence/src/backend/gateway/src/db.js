@@ -1,20 +1,17 @@
-import sqlite3 from "sqlite3";
+import pkg from "pg";
 
-const db = new sqlite3.Database("/data/gateway.db", err => {
-  if (err) console.error(err);
-  else console.log("Gateway DB connected");
+const { Pool } = pkg;
+
+export const pool = new Pool({
+  host: "postgres",
+  user: "transcendence",
+  password: "transcendence",
+  database: "gateway_db",
+  port: 5432
 });
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      user_id INTEGER PRIMARY KEY,
-      refresh_expires_at INTEGER NOT NULL,
-      last_access_expires_at INTEGER NOT NULL,
-      created_at INTEGER NOT NULL
-    );
-  `);
+pool.on("connect", () => {
+  console.log("Gateway connected to PostgreSQL");
 });
 
-export default db;
-
+export default pool;

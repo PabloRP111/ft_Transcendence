@@ -1,72 +1,427 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Share+Tech+Mono&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color: #d8fbff;
+  background-color: #0a0a0a;
+  font-family: "JetBrains Mono", "Share Tech Mono", monospace; /* font family for Tron look */
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Tron palette variables */
+  --tron-primary: rgba(0, 242, 255, 0.2);
+  --tron-primary-strong: rgba(0, 242, 255, 0.35);
+  --tron-glow: rgba(0, 242, 255, 0.45);
+  --tron-text: #d8fbff;
+  --tron-border: rgba(0,242,255,0.35);
+  --tron-secondary: rgba(255, 140, 0, 0.12);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+* {
+  box-sizing: border-box;
 }
-a:hover {
-  color: #535bf2;
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  background: #0a0a0a;
+  color: var(--tron-text);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a {
+  text-decoration: none;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+@keyframes gridScroll { /* animation for grid floor */
+  from {
+    transform: perspective(960px) rotateX(74deg) translateY(0);
+  }
+  to {
+    transform: perspective(960px) rotateX(74deg) translateY(60px);
+  }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@keyframes scanMove { /* animation for scanline */
+  from {
+    background-position-y: 0;
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+  to {
+    background-position-y: 8px;
   }
 }
+
+@keyframes pulseBlue { /* animation for pulse effect in buttons */
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(0, 242, 255, 0.45),
+      0 0 24px rgba(0, 242, 255, 0.25),
+      inset 0 0 12px rgba(0, 242, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 16px rgba(0, 242, 255, 0.75),
+      0 0 34px rgba(0, 242, 255, 0.45),
+      inset 0 0 18px rgba(0, 242, 255, 0.2);
+  }
+}
+
+@keyframes panelBreath {
+  0%,
+  100% {
+    border-color: rgba(0, 242, 255, 0.38);
+  }
+  50% {
+    border-color: rgba(0, 242, 255, 0.72);
+  }
+}
+
+@keyframes cycleRunA {
+  from {
+    transform: translateX(-20%) translateY(70vh);
+  }
+  to {
+    transform: translateX(120vw) translateY(55vh);
+  }
+}
+
+@keyframes cycleRunB {
+  from {
+    transform: translateX(120vw) translateY(65vh);
+  }
+  to {
+    transform: translateX(-20%) translateY(50vh);
+  }
+}
+
+@keyframes cycleRunC {
+  from {
+    transform: translateX(-10%) translateY(75vh);
+  }
+  to {
+    transform: translateX(120vw) translateY(60vh);
+  }
+}
+
+@keyframes scan {
+  100% { transform: translateX(100%); }
+}
+
+.cycle-a {
+  animation: cycleRunA 12s linear infinite;
+}
+
+.cycle-b {
+  animation: cycleRunB 18s linear infinite;
+}
+
+.cycle-c {
+  animation: cycleRunC 15s linear infinite;
+}
+
+.cycle-a::before,
+.cycle-c::before {
+  right: -8px;
+}
+
+.cycle-b::before {
+  left: -8px;
+}
+
+.cycle-a::after,
+.cycle-c::after {
+  right: -10px;
+}
+
+.cycle-b::after {
+  left: -10px;
+}
+
+@layer components {
+  .grid-atmosphere {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 18%, var(--tron-primary), transparent 38%),
+      radial-gradient(circle at 8% 72%, var(--tron-secondary), transparent 35%),
+      radial-gradient(circle at 92% 70%, var(--tron-primary), transparent 36%),
+      linear-gradient(180deg, rgba(2, 6, 12, 0.4) 0%, rgba(10, 10, 10, 1) 62%);
+  }
+
+  .grid-floor {
+    position: absolute;
+    inset: 42% -24% -45% -24%;
+
+    background-image:
+      linear-gradient(to right, var(--tron-primary-strong) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--tron-primary-strong) 1px, transparent 1px);
+
+    background-size: 60px 60px;
+    transform-origin: center top;
+
+    animation: gridScroll 7s linear infinite;
+
+    filter: drop-shadow(0 0 8px var(--tron-glow));
+    opacity: 0.86;
+  }
+
+  .scanline-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0,
+      rgba(0, 0, 0, 0.12) 50%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    background-size: 100% 6px;
+    mix-blend-mode: screen;
+    opacity: 0.26;
+    animation: scanMove 0.28s linear infinite;
+  }
+
+  .lightcycle-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .lightcycle {
+    position: absolute;
+    width: 70px;
+    height: 1.5px;
+    border-radius: 2px;
+    background: var(--tron-primary-strong);
+    box-shadow:
+      0 0 10px var(--tron-glow),
+      0 0 22px var(--tron-glow);
+
+    offset-rotate: auto;
+    animation: ridePath 12s linear infinite;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 6px var(--tron-glow));
+  }
+
+  .lightcycle::before {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 10px;
+    height: 6px;
+    border-radius: 6px;
+
+    background: var(--tron-primary-strong);
+
+    box-shadow:
+      0 0 8px var(--tron-glow),
+      0 0 18px var(--tron-glow),
+      0 0 28px var(--tron-glow);
+  }
+
+  .lightcycle::after {
+    content: "";
+
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+
+    width: 14px;
+    height: 14px;
+
+    border-radius: 50%;
+
+    border: 2px solid var(--tron-primary-strong);
+
+    box-shadow:
+      0 0 10px var(--tron-glow),
+      inset 0 0 6px var(--tron-glow);
+  }
+
+  .neon-title {
+    text-shadow:
+      0 0 8px rgba(0, 242, 255, 0.82),
+      0 0 22px rgba(0, 242, 255, 0.42);
+  }
+
+  .neon-panel {
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 242, 255, 0.5);
+    background: linear-gradient(
+      160deg,
+      rgba(4, 12, 22, 0.4) 0%,   /* más transparente */
+      rgba(10, 10, 10, 0.48) 62%,
+      rgba(8, 18, 28, 0.48) 100%
+    );
+    box-shadow:
+      inset 0 0 38px rgba(0, 242, 255, 0.08),
+      0 0 26px rgba(0, 242, 255, 0.22),
+      0 0 64px rgba(255, 140, 0, 0.1);
+    backdrop-filter: blur(3px);
+    animation: panelBreath 3.2s ease-in-out infinite;
+  }
+
+  /* H1 efecto Tron*/
+  .landing-tron-title {
+    font-family: "JetBrains Mono", "Share Tech Mono", monospace; /* futurista */
+    font-weight: 800;
+    font-size: 4rem; /* ajustable */
+    text-transform: uppercase;
+    color: #0ff; /* base cyan */
+    text-align: center;
+    text-shadow:
+      0 0 6px rgba(0,242,255,0.8),
+      0 0 12px rgba(0,242,255,0.6),
+      0 0 18px rgba(0,242,255,0.4);
+    letter-spacing: 0.16em;
+    background: none; /* sin banda */
+    margin: 0; /* no desplaza */
+    padding: 0;
+    line-height: 1;
+    position: relative; /* o absolute si quieres flotar sobre panel */
+    z-index: 20; /* sobre fondo pero debajo de otros elementos si hace falta */
+    animation: pulseBlue 2s ease-in-out infinite;
+  }
+
+  @media (min-width: 640px) {
+    .landing-tron-title {
+      font-size: 4rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .landing-tron-title {
+      font-size: 4.5rem;
+    }
+  }
+
+  .neon-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.375rem;
+    border-width: 1px;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    transition: all 300ms;
+    border-color: rgba(0, 242, 255, 0.6);
+    color: #c8fbff;
+    background: rgba(0, 20, 30, 0.45);
+    box-shadow:
+      0 0 8px rgba(0, 242, 255, 0.45),
+      inset 0 0 12px rgba(0, 242, 255, 0.15);
+  }
+
+  .neon-button:hover {
+    transform: translateY(-1px);
+    background: rgba(0, 242, 255, 0.14);
+    box-shadow:
+      0 0 16px rgba(0, 242, 255, 0.7),
+      inset 0 0 18px rgba(0, 242, 255, 0.2);
+  }
+
+  .neon-profile-pulse {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(6, 182, 212, 0.5); /* cyan-500/50 */
+    background-color: rgba(8, 51, 68, 0.2);   /* cyan-950/20 */
+    padding: 0.5rem 1rem;                     /* px-4 py-2 */
+    color: #22d3ee;                           /* cyan-400 */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 5px rgba(6, 182, 212, 0.2);
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  .neon-profile-pulse:hover {
+    border-color: #22d3ee;                    /* cyan-400 */
+    background-color: rgba(22, 78, 99, 0.4);  /* cyan-900/40 */
+    color: #ecfeff;                           /* cyan-50 */
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), inset 0 0 10px rgba(6, 182, 212, 0.3);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  }
+
+  /* El efecto de escaneo */
+  .neon-profile-pulse::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(34, 211, 238, 0.2), /* cyan-400/20 */
+      transparent
+    );
+    animation: scan 4s infinite;
+  }
+
+  .subroutine-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    transition: color 300ms;
+    color: rgba(191, 246, 255, 0.82);
+    text-shadow: 0 0 8px rgba(0, 242, 255, 0.35);
+  }
+
+  .subroutine-link:hover {
+    color: #00f2ff;
+    text-shadow: 0 0 12px rgba(0, 242, 255, 0.75);
+  }
+}
+
+
+/* --- CUSTOM SCROLLBAR FOR CHAT MODULE --- */
+  
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* Narrow width for a tech look */
+  }
+
+  /* Target the track to remove that white background */
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent; 
+    margin-block: 0.5rem; /* Keeps the thumb from touching the rounded corners */
+  }
+
+  /* The draggable scroll handle */
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00f2ff 0%, #0891b2 100%);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    box-shadow: 0 0 8px rgba(0, 242, 255, 0.4); /* Neon glow effect */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #00f2ff;
+    box-shadow: 0 0 12px rgba(0, 242, 255, 0.8);
+  }
+
+  /* Firefox support */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #00f2ff transparent;
+  }

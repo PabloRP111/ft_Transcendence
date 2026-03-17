@@ -1,3 +1,8 @@
-1. Averiguar porque falla el botón de refresh
-2. Proteger pages
-3. Reunión para decidir la arquitectura del projecto y la división del trabajo
+Arreglar sistema de autentificación, hacer que se guarde el accessToken en localStorage (No en authContext) y que se lea al recargar la página.
+ En caso de no haber accessToken, no logear.
+ En caso de que exista pero este caduco, hacer refresh
+
+Revisar si esta correcto el funcionamiento de authContext
+
+Hacer que la page Profile lea datos de la db del user.
+ Nginx redirije a gateway, no se llama al container de gateway, llamada al endpoint de user container directamente.
