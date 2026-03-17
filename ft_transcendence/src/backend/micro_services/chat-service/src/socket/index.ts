@@ -29,6 +29,8 @@ import { Server as SocketServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import pool from '../db/pool';
 import { isParticipant } from '../db/helpers';
+import { validateContent } from '../utils/validate';
+import { rateLimiter } from './rateLimiter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -348,12 +350,39 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
      * client can use the same data model for both HTTP history and real-time events.
      */
     socket.on('sendMessage', async (payload: unknown) => {
-      if (!hasStringField(payload, 'conversationId') || !hasStringField(payload, 'content')) {
-        socket.emit('messageFailed', { error: 'invalid payload: conversationId and content required' });
+      // ── Step 1: validate conversationId ─────────────────────────────────────
+      if (!hasStringField(payload, 'conversationId')) {
+        socket.emit('messageFailed', { error: 'invalid payload: conversationId required' });
         return;
       }
 
-      const { conversationId, content } = payload as { conversationId: string; content: string };
+      const { conversationId } = payload as { conversationId: string };
+
+      // ── Step 2: validate content (type, empty, max length) ──────────────────
+      // validateContent returns null on success or an error string on failure.
+      // We check the raw field from payload (not yet narrowed to string).
+      const contentError = validateContent((payload as Record<string, unknown>).content);
+      if (contentError) {
+        socket.emit('messageFailed', { conversationId, error: contentError });
+        return;
+      }
+
+      // Safe to cast — validateContent confirmed it's a non-empty string within length.
+      const { content } = payload as { conversationId: string; content: string };
+
+      // ── Step 3: rate limit check ─────────────────────────────────────────────
+      // Checked BEFORE the DB participant query to avoid unnecessary DB load.
+      // The rate limit key is "userId:conversationId" — independent per conversation.
+      const rateResult = rateLimiter.consume(userId, conversationId);
+      if (!rateResult.allowed) {
+        // Emit rateLimitExceeded (not messageFailed) so the client can distinguish
+        // the reason and show a "slow down" UI hint with the retry delay.
+        socket.emit('rateLimitExceeded', {
+          conversationId,
+          retryAfter: rateResult.retryAfter, // ms until 1 token refills
+        });
+        return;
+      }
 
       // ── Access control ──────────────────────────────────────────────────────
       try {

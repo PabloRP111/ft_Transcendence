@@ -25,6 +25,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../db/pool';
 import { isParticipant } from '../db/helpers';
 import { getChatNamespace } from '../socket';
+import { validateContent } from '../utils/validate';
 
 const router = Router();
 
@@ -48,10 +49,14 @@ router.post('/:conversationId/messages', async (req: Request, res: Response): Pr
   const { content } = req.body as { content: unknown };
 
   // ── Validation ──────────────────────────────────────────────────────────────
-  if (typeof content !== 'string' || content.trim() === '') {
-    res.status(400).json({ error: 'content must be a non-empty string' });
+  // validateContent checks: is a string, non-empty, within 2000-char limit.
+  const contentError = validateContent(content);
+  if (contentError) {
+    res.status(400).json({ error: contentError });
     return;
   }
+  // Cast is safe: validateContent confirmed content is a non-empty string.
+  const validContent = content as string;
 
   // ── Access control ──────────────────────────────────────────────────────────
   // Verify the caller belongs to this conversation before inserting.
@@ -74,7 +79,7 @@ router.post('/:conversationId/messages', async (req: Request, res: Response): Pr
       `INSERT INTO messages (conversation_id, sender_id, content)
        VALUES ($1, $2, $3)
        RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
-      [conversationId, req.userId, content.trim()],
+      [conversationId, req.userId, validContent.trim()],
     );
 
     const msg = result.rows[0];
@@ -217,10 +222,13 @@ router.patch(
     const { content } = req.body as { content: unknown };
 
     // ── Validation ────────────────────────────────────────────────────────────
-    if (typeof content !== 'string' || content.trim() === '') {
-      res.status(400).json({ error: 'content must be a non-empty string' });
+    const contentError = validateContent(content);
+    if (contentError) {
+      res.status(400).json({ error: contentError });
       return;
     }
+    // Cast is safe: validateContent confirmed content is a non-empty string.
+    const validContent = content as string;
 
     // ── Participant check ─────────────────────────────────────────────────────
     const allowed = await isParticipant(conversationId, req.userId);
@@ -256,7 +264,7 @@ router.patch(
            AND conversation_id = $3
            AND sender_id   = $4
          RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
-        [content.trim(), messageId, conversationId, req.userId],
+        [validContent.trim(), messageId, conversationId, req.userId],
       );
 
       // Zero rows updated means either the message doesn't exist or caller isn't the sender

@@ -58,6 +58,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  // name must not exceed 100 characters if provided
+  if (typeof name === 'string' && name.length > 100) {
+    res.status(400).json({ error: 'name must not exceed 100 characters' });
+    return;
+  }
+
   // participantIds must be an array of strings if provided
   if (
     participantIds !== undefined &&

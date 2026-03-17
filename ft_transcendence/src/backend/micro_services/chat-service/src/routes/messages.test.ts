@@ -123,6 +123,17 @@ describe('POST /conversations/:conversationId/messages', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when content exceeds 2000 characters', async () => {
+    const convId = await createConversation();
+
+    const res = await request(app)
+      .post(`/conversations/${convId}/messages`)
+      .set('Authorization', makeToken(USER_A))
+      .send({ content: 'a'.repeat(2001) });
+
+    expect(res.status).toBe(400);
+  });
+
   it('returns 401 with no token', async () => {
     const convId = await createConversation();
 
@@ -305,6 +316,18 @@ describe('PATCH /conversations/:conversationId/messages/:messageId', () => {
       .patch(`/conversations/${convId}/messages/${msg.id}`)
       .set('Authorization', makeToken(USER_A))
       .send({ content: '   ' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when content exceeds 2000 characters', async () => {
+    const convId = await createConversation();
+    const msg = await postMessage(convId, 'original');
+
+    const res = await request(app)
+      .patch(`/conversations/${convId}/messages/${msg.id}`)
+      .set('Authorization', makeToken(USER_A))
+      .send({ content: 'a'.repeat(2001) });
 
     expect(res.status).toBe(400);
   });

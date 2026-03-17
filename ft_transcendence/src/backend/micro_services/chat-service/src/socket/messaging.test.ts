@@ -54,6 +54,9 @@ import app from '../app';
 import { attachSocketIO } from './index';
 import pool from '../db/pool';
 import { isParticipant } from '../db/helpers';
+// rateLimiter is NOT mocked — pure in-memory, no DB dependency.
+// We reset it in beforeEach so rate limit state doesn't bleed between tests.
+import { rateLimiter } from './rateLimiter';
 
 // ─── Typed mock helpers ───────────────────────────────────────────────────────
 
@@ -180,6 +183,11 @@ describe('Socket.IO /chat namespace — M6 messaging', () => {
     // Return empty rows by default — user has no conversations, so no userOnline
     // events are emitted to any rooms. This keeps tests focused.
     mockQuery.mockResolvedValue({ rows: [], rowCount: 0 });
+
+    // Clear rate limiter state so each test starts with a fresh bucket.
+    // Without this, a test that sends 10 messages would leave the bucket drained
+    // and cause the next test's first sendMessage to be rate-limited.
+    rateLimiter.reset();
   });
 
   afterEach(() => {
@@ -354,4 +362,69 @@ describe('Socket.IO /chat namespace — M6 messaging', () => {
 
     await expect(failed).resolves.toBeTruthy();
   });
+
+  // ─── sendMessage: content length validation ───────────────────────────────
+
+  it('emits messageFailed when content exceeds 2000 characters', async () => {
+    const clientA = connectClient(serverUrl, USER_A);
+    clients.push(clientA);
+    await waitForConnect(clientA);
+
+    const failed = waitForEvent(clientA, 'messageFailed');
+
+    // 2001-character content — over the limit
+    clientA.emit('sendMessage', {
+      conversationId: CONV_ID,
+      content: 'a'.repeat(2001),
+    });
+
+    const result = await failed;
+    // The failure should identify which conversation it was for
+    expect(result).toMatchObject({ conversationId: CONV_ID });
+  });
+
+  // ─── sendMessage: rate limiting ───────────────────────────────────────────
+
+  /**
+   * Send 10 messages sequentially (each awaited so we confirm it succeeded before
+   * sending the next). The 11th message should trigger rateLimitExceeded.
+   *
+   * Why sequential instead of all-at-once?
+   *   Sending 10 messages in parallel and awaiting all 10 newMessage events is
+   *   unreliable because each waitForEvent() registers a `once` handler — when
+   *   the first event arrives, ALL 10 handlers fire and all promises resolve with
+   *   the same data, masking individual failures.
+   *   Sequential is slower but unambiguous: we confirm each message succeeds
+   *   before firing the next.
+   */
+  it('emits rateLimitExceeded after 10 messages in a burst', async () => {
+    mockIsParticipant.mockResolvedValue(true);
+
+    // getUserConversationIds fires once on connect; each sendMessage does one INSERT.
+    mockQuery
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // connect: getUserConversationIds
+      .mockResolvedValue({ rows: [FAKE_MESSAGE_ROW], rowCount: 1 }); // all INSERTs
+
+    const clientA = connectClient(serverUrl, USER_A);
+    clients.push(clientA);
+    await waitForConnect(clientA);
+    await joinConversation(clientA, CONV_ID);
+
+    // Send 10 messages one by one, confirming each succeeds before the next
+    for (let i = 0; i < 10; i++) {
+      const received = waitForEvent(clientA, 'newMessage');
+      clientA.emit('sendMessage', { conversationId: CONV_ID, content: `message ${i + 1}` });
+      await received;
+    }
+
+    // 11th message — bucket is empty, should be rate-limited
+    const exceeded = waitForEvent(clientA, 'rateLimitExceeded');
+    clientA.emit('sendMessage', { conversationId: CONV_ID, content: 'over the limit' });
+
+    const result = await exceeded;
+    expect(result).toMatchObject({
+      conversationId: CONV_ID,
+      retryAfter: expect.any(Number),
+    });
+  }, 10000); // extend timeout: 10 sequential round-trips need room
 });
