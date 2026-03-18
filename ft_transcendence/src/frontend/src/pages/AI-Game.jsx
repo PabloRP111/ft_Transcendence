@@ -1,14 +1,18 @@
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { UserRound, Heart } from "lucide-react";
+import TronCanvas from "../components/TronCanvas";
+import { useTronMatch } from "../hooks/useTronMatch";
+import { STARTING_LIVES } from "../game/tron/constants";
+import { PLAYER_ONE_KEYMAP } from "../game/tron/input";
 
 function Lives({ lives }) {
   return (
     <div className="flex gap-2">
-      {[0,1,2].map(i => (
+      {Array.from({ length: STARTING_LIVES }).map((_, i) => (
         <motion.div
           key={i}
-          animate={i < lives ? { scale:[1,1.2,1] } : {}}
+          animate={i < lives ? { scale: [1, 1.2, 1] } : {}}
           transition={{ repeat: Infinity, duration: 1.2 }}
         >
           <Heart
@@ -26,55 +30,36 @@ function Lives({ lives }) {
 }
 
 export default function TronDuelArena() {
+  const {
+    engineRef,
+    phase,
+    countdown,
+    overlayText,
+    hud,
+    matchResult,
+    queueDirection,
+    restartMatch,
+  } = useTronMatch();
 
-  const [countdown, setCountdown] = useState(3);
-  const [phase, setPhase] = useState("countdown");
-
-  useEffect(() => {
-
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-
-        if (prev === 1) {
-          clearInterval(timer);
-          setPhase("ready");
-
-          setTimeout(()=>{
-            setPhase("fight");
-          },1200);
-
-          return 0;
-        }
-
-        return prev - 1;
-      });
-    },1000);
-
-    return () => clearInterval(timer);
-
-  },[]);
+  const player1 = hud.players[0];
+  const player2 = hud.players[1];
 
   useEffect(() => {
-    if (phase !== "fight") return;
+    const handleKeyDown = (event) => {
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      const nextDirection = PLAYER_ONE_KEYMAP[key];
 
-    const t = setTimeout(() => {
-      setPhase("playing");
-    }, 1000);
+      if (!nextDirection || phase === "finished") {
+        return;
+      }
 
-    return () => clearTimeout(t);
-  }, [phase]);
+      event.preventDefault();
+      queueDirection(1, nextDirection);
+    };
 
-  const player1 = {
-    name:"PlayerOne",
-    lives:2,
-    score:1
-  };
-
-  const player2 = {
-    name:"PlayerTwo",
-    lives:2,
-    score:0
-  };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [phase, queueDirection]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
@@ -105,10 +90,14 @@ export default function TronDuelArena() {
           </motion.div>
 
           <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
-            {player1.name}
+            {player1?.name ?? "Player"}
           </h2>
 
-          <Lives lives={player1.lives}/>
+          <Lives lives={player1?.lives ?? STARTING_LIVES} />
+
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
+            Score {player1?.score ?? 0}
+          </p>
 
         </motion.section>
 
@@ -136,47 +125,53 @@ export default function TronDuelArena() {
               transition={{repeat:Infinity,duration:2}}
             />
 
-            <span className="text-cyan-200/40 uppercase tracking-widest">
+            <TronCanvas engineRef={engineRef} />
+
+            <div className="pointer-events-none absolute left-0 top-0 z-20 h-full w-full">
               {/* COUNTDOWN */}
-          {phase === "countdown" && (
-            <motion.div
-              key={countdown}
-              initial={{scale:0}}
-              animate={{scale:[1,1.4,1]}}
-              className="text-6xl text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
-            >
-              {countdown}
-            </motion.div>
-          )}
+              {phase === "countdown" && (
+                <motion.div
+                  key={countdown}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [1, 1.4, 1] }}
+                  className="absolute inset-0 flex items-center justify-center text-6xl text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
+                >
+                  {countdown}
+                </motion.div>
+              )}
 
-          {/* READY */}
-          {phase === "ready" && (
-            <motion.div
-              initial={{scale:0}}
-              animate={{scale:[1,1.2,1]}}
-              className="text-5xl text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
-            >
-              READY
-            </motion.div>
-          )}
+              {(phase === "ready" || phase === "fight") && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [1, 1.3, 1] }}
+                  className={
+                    phase === "fight"
+                      ? "absolute inset-0 flex items-center justify-center text-6xl text-red-400 drop-shadow-[0_0_25px_red]"
+                      : "absolute inset-0 flex items-center justify-center text-5xl text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
+                  }
+                >
+                  {overlayText}
+                </motion.div>
+              )}
 
-          {/* FIGHT */}
-          {phase === "fight" && (
-            <motion.div
-              initial={{scale:0}}
-              animate={{scale:[1,1.5,1]}}
-              transition={{duration:0.6}}
-              className="text-6xl text-red-400 drop-shadow-[0_0_25px_red]"
-            >
-              FIGHT
-            </motion.div>
-          )}
-            </span>
+              {phase === "finished" && (
+                <div className="pointer-events-auto absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/65 backdrop-blur-sm">
+                  <p className="text-2xl uppercase tracking-[0.22em] text-cyan-100">{matchResult}</p>
+                  <button
+                    className="neon-button px-6 py-3"
+                    onClick={restartMatch}
+                  >
+                    Restart Match
+                  </button>
+                </div>
+              )}
+            </div>
 
           </motion.div>
 
-
-          
+          <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/75">
+            Controls: WASD or Arrow keys
+          </p>
 
         </div>
 
@@ -198,10 +193,14 @@ export default function TronDuelArena() {
           </motion.div>
 
           <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
-            {player2.name}
+            {player2?.name ?? "AI"}
           </h2>
 
-          <Lives lives={player2.lives}/>
+          <Lives lives={player2?.lives ?? STARTING_LIVES} />
+
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
+            Score {player2?.score ?? 0}
+          </p>
 
         </motion.section>
 
