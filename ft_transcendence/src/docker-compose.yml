@@ -42,6 +42,13 @@ services:
     networks:
       - transcendence
 
+  chat:
+    build: ./backend/micro_services/chat-service
+    networks:
+      - transcendence
+    depends_on:
+      - postgres
+
   frontend:
     build: ./frontend
     command: sh -c "npm install && npm run dev -- --host"
