@@ -22,4 +22,30 @@ router.get("/me", async (req, res) => {
   }
 });
 
+router.put("/me", async (req, res) => {
+  try {
+    const response = await fetch(`${USERS_SERVICE}/${req.user.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: data?.error || "Failed to update user profile"
+      });
+    }
+
+    return res.json(data);
+  } catch (error) {
+    console.error("/me profile update failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
+
+
 export default router;
+

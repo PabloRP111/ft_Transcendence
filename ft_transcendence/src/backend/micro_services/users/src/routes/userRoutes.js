@@ -104,4 +104,61 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// UPDATE USER
+router.put("/:id", async (req, res) => {
+  const { username, email, password } = req.body;
+
+  try {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (username) {
+      fields.push(`username = $${idx}`);
+      values.push(username);
+      idx++;
+    }
+
+    if (email) {
+      fields.push(`email = $${idx}`);
+      values.push(email);
+      idx++;
+    }
+
+    if (password) {
+      const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+      fields.push(`password = $${idx}`);
+      values.push(hashed);
+      idx++;
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    values.push(req.params.id);
+
+    const result = await pool.query(
+      `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+
+    const user = result.rows[0];
+
+    if (!user)
+      return res.status(404).json({ error: "User not found" });
+
+    delete user.password;
+
+    res.json(user);
+
+  } catch (err) {
+    if (err.code === "23505") {
+      return res.status(409).json({ error: "Email or username already exists" });
+    }
+
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
 export default router;

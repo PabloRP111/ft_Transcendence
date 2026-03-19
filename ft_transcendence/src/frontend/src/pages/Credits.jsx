@@ -2,6 +2,11 @@ import { motion } from "framer-motion";
 import { UserRound } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
+import prosas from "../assets/credits/prosas.png";
+import aamoros from "../assets/credits/aamoros.png";
+import mzuloaga from "../assets/credits/mzuloaga.png";
+import femoreno from "../assets/credits/femoreno.png";
+import jotrujil from "../assets/credits/jotrujil.png";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,11 +31,11 @@ const itemVariants = {
 export default function CreditsPage() {
 
   const players = [
-    { id: 1, name: "prosas-p" },
-    { id: 2, name: "aamoros-" },
-    { id: 3, name: "mzuloaga" },
-    { id: 4, name: "femoreno" },
-    { id: 5, name: "jotrujil" }
+    { id: 1, name: "prosas-p", rol: "Product Owner", avatar: prosas},
+    { id: 2, name: "aamoros-", rol: "Project Manager", avatar: aamoros},
+    { id: 3, name: "mzuloaga", rol: "Technical Lead", avatar: mzuloaga},
+    { id: 4, name: "femoreno", rol: "Developer", avatar: femoreno},
+    { id: 5, name: "jotrujil", rol: "Developer", avatar: jotrujil}
   ];
 
   return (
@@ -57,9 +62,9 @@ export default function CreditsPage() {
           {/* TITLE */}
           <motion.h1
             variants={itemVariants}
-            className="neon-title text-4xl tracking-[0.2em] text-gridBlue text-center"
+            className="credits-tron-title mt-50 sm:-mt-20 "
           >
-            Creditos
+            Créditos
           </motion.h1>
 
           {/* PLAYERS */}
@@ -77,15 +82,24 @@ export default function CreditsPage() {
                 <motion.div
                   animate={{ y: [0, -6, 0] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_30px_#00f7ff]"
+                  className="flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_30px_#00f7ff] overflow-hidden"
                 >
-                  <UserRound size={40} />
+                  <img
+                    src={player.avatar}
+                    alt={player.name}
+                    className="h-20 w-20 rounded-full object-cover"
+                  />
                 </motion.div>
 
                 {/* Username */}
                 <h2 className="text-sm tracking-[0.18em] text-gridBlue">
                   {player.name}
                 </h2>
+
+                {/* Role */}
+                <p className="text-xs tracking-[0.1em] text-cyan-300">
+                  {player.rol}
+                </p>
 
               </motion.div>
 

@@ -5,6 +5,8 @@ import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser } from "../api/users";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import userimage from "../assets/userimage.png";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -38,6 +40,7 @@ export default function ProfilePage() {
     score: 0,
     rank: 0,
   });
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -51,10 +54,10 @@ export default function ProfilePage() {
           if (currentUser && currentUser.username) {
             setProfile({
               username: currentUser.username,
-              wins: Number(currentUser.wins ?? 0),
-              matches: Number(currentUser.matches ?? 0),
-              score: Number(currentUser.score ?? 0),
-              rank: Number(currentUser.rank ?? 0),
+              wins: Number(currentUser.wins),
+              matches: Number(currentUser.matches),
+              score: Number(currentUser.score),
+              rank: Number(currentUser.rank),
             });
             localStorage.setItem("username", currentUser.username);
             return;
@@ -100,7 +103,9 @@ export default function ProfilePage() {
           variants={itemVariants}
           className="neon-panel w-full max-w-3xl p-10 text-center"
         >
-          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border-[color:var(--tron-border)] text-cyan-100 hover:bg-cyan-300/10">
+          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border-[color:var(--tron-border)] text-cyan-100 hover:bg-cyan-300/10"
+            onClick={() => navigate("/edit")}
+          >
             <Pencil size={16} />
           </button>
           <motion.div
@@ -108,7 +113,11 @@ export default function ProfilePage() {
             className="mb-6 flex justify-center"
           >
             <div className="flex h-24 w-24 items-center justify-center rounded-full border-[color:var(--tron-border)]">
-              <UserRound size={48} />
+              <img
+                src={userimage}
+                alt="userimage"
+                className="h-24 w-24 rounded-full object-cover"
+              />
             </div>
           </motion.div>
 

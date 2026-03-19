@@ -294,6 +294,30 @@ a {
     animation: pulseBlue 1.6s ease-in-out infinite;
   }
 
+  .credits-tron-title {
+  font-family: "JetBrains Mono", "Share Tech Mono", monospace;
+  font-weight: 800;
+  font-size: 4rem;
+  text-transform: uppercase;
+  color: var(--tron-text);
+  text-align: center;
+
+  text-shadow:
+    0 0 6px var(--tron-glow),
+    0 0 12px var(--tron-primary-strong),
+    0 0 18px var(--tron-primary);
+
+  letter-spacing: 0.16em;
+  background: none;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  position: relative;
+  z-index: 20;
+
+  animation: pulseGold 1.6s ease-in-out infinite;
+}
+
   @media (min-width: 640px) {
     .landing-tron-title {
       font-size: 4rem;

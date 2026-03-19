@@ -8,6 +8,7 @@ import Profile from "./pages/Profile.jsx";
 import Landing from "./pages/Landing.jsx";
 import Game from "./pages/Game.jsx";
 import Credits from "./pages/Credits.jsx";
+import Edit from "./pages/Edit.jsx";
 
 import useTronTheme from "./hooks/useTronTheme";
 
@@ -23,6 +24,7 @@ function RouterContent() {
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
         <Route path="/game" element={<Game />} />
+        <Route path="/edit" element={<Edit />} />
       </Route>
     </Routes>
   );
