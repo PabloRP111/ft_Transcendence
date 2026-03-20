@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { UserRound, Heart } from "lucide-react";
 import TronCanvas from "../components/TronCanvas";
-import { useTronMatch } from "../hooks/useTronMatch";
+import { useTronMatch} from "../hooks/useTronMatchAPI";
 import { STARTING_LIVES } from "../game/tron/constants";
 import { PLAYER_ONE_KEYMAP } from "../game/tron/input";
 
