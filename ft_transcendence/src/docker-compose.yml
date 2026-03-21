@@ -35,7 +35,7 @@ services:
       #connect to postgres container using service name as hostname
       DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/transcendence
       #shared JWT secret (from .env), must match the value used by all other services
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-supersecret2}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
     depends_on:
       - postgres

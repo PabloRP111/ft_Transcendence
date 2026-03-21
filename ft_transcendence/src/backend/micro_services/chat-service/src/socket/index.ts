@@ -7,7 +7,7 @@ import { validateContent } from '../utils/validate';
 import { rateLimiter } from './rateLimiter';
 
 interface JwtPayload {
-  sub: string;
+  id: number;
 }
 
 interface SocketData {
@@ -46,9 +46,8 @@ function isJwtPayload(payload: unknown): payload is JwtPayload {
   return (
     typeof payload === 'object' &&
     payload !== null &&
-    'sub' in payload &&
-    typeof (payload as Record<string, unknown>).sub === 'string' &&
-    (payload as Record<string, unknown>).sub !== ''
+    'id' in payload &&
+    typeof (payload as Record<string, unknown>).id === 'number'
   );
 }
 
@@ -87,7 +86,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
         return next(new Error('invalid token payload'));
       }
 
-      (socket.data as SocketData).userId = payload.sub;
+      (socket.data as SocketData).userId = String(payload.id);
       next();
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
