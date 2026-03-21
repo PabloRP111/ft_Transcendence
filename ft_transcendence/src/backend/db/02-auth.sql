@@ -1,6 +1,4 @@
-\connect gateway_db;
-
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions.sessions (
   user_id INTEGER PRIMARY KEY,
   session_id TEXT NOT NULL,
   refresh_expires_at BIGINT NOT NULL,

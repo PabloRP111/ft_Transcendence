@@ -28,9 +28,7 @@ fclean: down
 	@echo "🧹 Borrando imágenes del proyecto..."
 	@$(DOCKER_BIN) -f ./src/docker-compose.yml build --no-cache
 	@docker images -q | xargs -r docker rmi -f
-	@echo "🗑 Borrando bases de datos locales..."
-	@rm -f ./src/backend/micro_services/users/users.db
-	@rm -f ./src/backend/gateway/src/gateway.db
+	@echo "🗑 Borrando cookies"
 	@rm -f ./src/backend/gateway/src/cookies.txt
 	@echo "✅ Limpieza completa"
 
