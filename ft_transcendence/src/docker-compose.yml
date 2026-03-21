@@ -32,9 +32,10 @@ services:
     restart: on-failure
     environment:
       #connect to postgres container using service name as hostname
-      DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/chat_db
+      DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/transcendence
       #shared JWT secret (from .env), must match the value used by all other services
       JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
     depends_on:
       - postgres
     networks:
@@ -52,15 +53,10 @@ services:
     depends_on:
       - users
       - postgres
+    environment:
+      CHAT_SERVICE: http://chat:3003
     networks:
       - transcendence
-
-  chat:
-    build: ./backend/micro_services/chat-service
-    networks:
-      - transcendence
-    depends_on:
-      - postgres
 
   frontend:
     build: ./frontend

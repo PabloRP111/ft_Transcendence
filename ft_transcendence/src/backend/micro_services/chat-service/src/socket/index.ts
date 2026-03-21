@@ -53,9 +53,11 @@ function isJwtPayload(payload: unknown): payload is JwtPayload {
 }
 
 export function attachSocketIO(httpServer: HttpServer): SocketServer {
+  const allowedOrigin = process.env.FRONTEND_URL || 'https://localhost:8443';
+
   const io = new SocketServer(httpServer, {
     cors: {
-      origin: '*',
+      origin: allowedOrigin,
       methods: ['GET', 'POST'],
     },
   });
