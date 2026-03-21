@@ -24,6 +24,7 @@ services:
       - frontend
       - gateway
       - users
+      - chat
     networks:
       - transcendence
 
