@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { SocketProvider } from "./context/SocketContext";
 
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
@@ -23,7 +24,8 @@ function RouterContent() {
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
       <Route path="/credits" element={<Credits />} />
-       <Route path="/ai-game" element={<AIGame />} />      <Route path="/terms" element={<Terms />} />
+      <Route path="/ai-game" element={<AIGame />} />
+      <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
 
       <Route element={<ProtectedRoute />}>
@@ -37,9 +39,11 @@ function RouterContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <RouterContent />
-      </BrowserRouter>
+      <SocketProvider>
+        <BrowserRouter>
+          <RouterContent />
+        </BrowserRouter>
+      </SocketProvider>
     </AuthProvider>
   );
 }
