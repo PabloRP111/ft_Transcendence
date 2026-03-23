@@ -3,12 +3,13 @@ import pool from '../db/pool';
 
 const router = Router();
 
-// Crear conversación
-router.post('/', async (req: Request, res: Response) => {
+// ─── POST /conversations ───────────────────────────────────────────────────────
+
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   const { type, name, participantIds } = req.body as {
-    type: string;
-    name?: string;
-    participantIds?: number[];
+    type: unknown;
+    name: unknown;
+    participantIds: unknown;
   };
 
   if (type !== 'private' && type !== 'channel') {
@@ -16,33 +17,60 @@ router.post('/', async (req: Request, res: Response) => {
     return;
   }
 
-  const extras = participantIds ?? [];
+  if (name !== undefined && name !== null && typeof name !== 'string') {
+    res.status(400).json({ error: 'name must be a string' });
+    return;
+  }
+
+  if (typeof name === 'string' && name.length > 100) {
+    res.status(400).json({ error: 'name must not exceed 100 characters' });
+    return;
+  }
+
+  if (
+    participantIds !== undefined &&
+    participantIds !== null &&
+    (!Array.isArray(participantIds) || !(participantIds as unknown[]).every((id) => typeof id === 'string'))
+  ) {
+    res.status(400).json({ error: 'participantIds must be an array of strings' });
+    return;
+  }
+
+  const extraParticipants = (participantIds as string[] | undefined) ?? [];
+  const creatorId = parseInt(req.userId, 10);
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const conversationResult = await client.query(
+    const conversationResult = await client.query<{
+      id: number;
+      type: string;
+      name: string | null;
+      created_at: string;
+    }>(
       `INSERT INTO chat.conversations (type, name)
        VALUES ($1, $2)
        RETURNING id, type, name, created_at`,
       [type, name ?? null],
     );
+
     const conversation = conversationResult.rows[0];
 
-    // Por simplicidad, el creador será id 1
     await client.query(
       `INSERT INTO chat.conversation_participants (conversation_id, user_id, role)
-       VALUES ($1, 1, 'admin')`,
-      [conversation.id],
+       VALUES ($1, $2, 'admin')`,
+      [conversation.id, creatorId],
     );
 
-    for (const userId of extras) {
-      if (userId === 1) continue;
+    for (const participantId of extraParticipants) {
+      const pid = parseInt(participantId, 10);
+      if (pid === creatorId) continue;
+
       await client.query(
         `INSERT INTO chat.conversation_participants (conversation_id, user_id, role)
          VALUES ($1, $2, 'member')`,
-        [conversation.id, userId],
+        [conversation.id, pid],
       );
     }
 
@@ -56,32 +84,43 @@ router.post('/', async (req: Request, res: Response) => {
     });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err);
+    console.error('[POST /conversations] error:', err);
     res.status(500).json({ error: 'internal server error' });
   } finally {
     client.release();
   }
 });
 
-// Listar conversaciones
-router.get('/', async (_, res) => {
+// ─── GET /conversations ────────────────────────────────────────────────────────
+
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const userId = parseInt(req.userId, 10);
+
   try {
-    const result = await pool.query(
+    const result = await pool.query<{
+      id: number;
+      type: string;
+      name: string | null;
+      created_at: string;
+    }>(
       `SELECT c.id, c.type, c.name, c.created_at
        FROM chat.conversations c
        JOIN chat.conversation_participants cp ON c.id = cp.conversation_id
-       WHERE cp.user_id = 1
-       ORDER BY c.created_at DESC`
+       WHERE cp.user_id = $1
+       ORDER BY c.created_at DESC`,
+      [userId],
     );
 
-    res.json(result.rows.map(r => ({
-      id: r.id,
-      type: r.type,
-      name: r.name,
-      createdAt: r.created_at,
-    })));
+    res.json(
+      result.rows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        name: row.name,
+        createdAt: row.created_at,
+      })),
+    );
   } catch (err) {
-    console.error(err);
+    console.error('[GET /conversations] error:', err);
     res.status(500).json({ error: 'internal server error' });
   }
 });

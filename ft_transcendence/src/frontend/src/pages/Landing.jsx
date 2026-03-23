@@ -43,8 +43,8 @@ return (
       <Navbar />
 
       {!loading && isAuthenticated && (
-        <aside className="fixed left-0 top-24 bottom-12 z-40 hidden lg:flex items-center justify-center w-[calc(50vw-384px)] px-4">
-          <div className="w-full max-w-[320px] h-[60vh] max-h-[550px]">
+        <aside className="fixed left-0 top-24 bottom-12 z-40 flex items-center justify-center w-80 px-4">
+          <div className="w-full h-[60vh] max-h-[550px]">
             <ChatModule />
           </div>
         </aside>
