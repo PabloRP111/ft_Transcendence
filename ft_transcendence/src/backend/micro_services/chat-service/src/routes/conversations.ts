@@ -43,33 +43,61 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     await client.query('BEGIN');
 
-    const conversationResult = await client.query<{
-      id: number;
-      type: string;
-      name: string | null;
-      created_at: string;
-    }>(
-      `INSERT INTO chat.conversations (type, name)
-       VALUES ($1, $2)
-       RETURNING id, type, name, created_at`,
-      [type, name ?? null],
-    );
+    let conversation;
 
-    const conversation = conversationResult.rows[0];
+    /* 1. FIND_OR_CREATE_LOGIC: Force normalization to lowercase and trim spaces.
+       This ensures 'Arena_General' and 'arena_general' resolve to the same ID.
+    */
+    const normalizedName = typeof name === 'string' ? name.trim().toLowerCase() : null;
 
+    if (type === 'channel' && normalizedName) {
+      const existingConv = await client.query<{
+        id: number; type: string; name: string | null; created_at: string;
+      }>(
+        `SELECT id, type, name, created_at FROM chat.conversations 
+         WHERE LOWER(name) = $1 AND type = 'channel' LIMIT 1`,
+        [normalizedName]
+      );
+      
+      if (existingConv.rows.length > 0) {
+        conversation = existingConv.rows[0];
+      }
+    }
+
+    // 2. If no existing conversation was found, create it using the normalized name
+    if (!conversation) {
+      const conversationResult = await client.query<{
+        id: number; type: string; name: string | null; created_at: string;
+      }>(
+        `INSERT INTO chat.conversations (type, name)
+         VALUES ($1, $2)
+         RETURNING id, type, name, created_at`,
+        [type, normalizedName],
+      );
+      conversation = conversationResult.rows[0];
+    }
+
+    /* 3. PARTICIPANT_SYNC: Add the user as a participant.
+       By moving this OUTSIDE of the "if (!conversation)" block, we ensure 
+       that users who didn't create the room (User B) are still added to it.
+       'ON CONFLICT' prevents errors if the user is already a member.
+    */
     await client.query(
       `INSERT INTO chat.conversation_participants (conversation_id, user_id, role)
-       VALUES ($1, $2, 'admin')`,
+       VALUES ($1, $2, 'admin')
+       ON CONFLICT (conversation_id, user_id) DO NOTHING`,
       [conversation.id, creatorId],
     );
 
+    // Add any additional participants requested
     for (const participantId of extraParticipants) {
       const pid = parseInt(participantId, 10);
       if (pid === creatorId) continue;
 
       await client.query(
         `INSERT INTO chat.conversation_participants (conversation_id, user_id, role)
-         VALUES ($1, $2, 'member')`,
+         VALUES ($1, $2, 'member')
+         ON CONFLICT (conversation_id, user_id) DO NOTHING`,
         [conversation.id, pid],
       );
     }

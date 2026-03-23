@@ -27,13 +27,19 @@ export async function getMessages(conversationId, { limit = 50, before, beforeId
   return apiFetch(`/chat/conversations/${conversationId}/messages?${params}`);
 }
 
-// Create a new conversation.
-// type: "private" (DM) or "channel"
-// participantIds: array of user IDs to add (besides the creator)
-export async function createConversation(type, participantIds = []) {
+/* * Create a new conversation.
+* type: "private" (DM) or "channel"
+* participantIds: array of user IDs to add (besides the creator)
+* name: optional name for channels (REQUIRED for global Arena sync) [English Comment]
+*/
+export async function createConversation(type, participantIds = [], name = null) {
   return apiFetch("/chat/conversations", {
     method: "POST",
-    body: JSON.stringify({ type, participantIds }),
+    body: JSON.stringify({ 
+      type, 
+      participantIds,
+      name // Fixed: Now the name is included in the request body [English Comment]
+    }),
   });
 }
 

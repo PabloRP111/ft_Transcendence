@@ -193,6 +193,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       }
 
       try {
+        /* UPDATED: Added JOIN with auth.users and corrected variable mapping for Frontend [English Comment] */
         const result = await pool.query<{
           id: number;
           conversation_id: number;
@@ -200,25 +201,37 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
           content: string;
           created_at: string;
           edited_at: string | null;
+          username: string;
         }>(
-          `INSERT INTO chat.messages (conversation_id, sender_id, content)
-           VALUES ($1, $2, $3)
-           RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
+          `WITH inserted AS (
+              INSERT INTO chat.messages (conversation_id, sender_id, content)
+              VALUES ($1, $2, $3)
+              RETURNING id, conversation_id, sender_id, content, created_at, edited_at
+            )
+            SELECT i.*, u.username 
+            FROM inserted i
+            JOIN auth.users u ON i.sender_id = u.id`,
           [conversationId, userIdInt, content.trim()],
         );
 
         const msg = result.rows[0];
+        
+        /* UPDATED: Explicitly mapping DB snake_case to CamelCase expected by React [English Comment] */
         const newMessage = {
           id: msg.id,
-          conversationId: msg.conversation_id,
-          senderId: msg.sender_id,
+          conversationId: msg.conversation_id, // Map from conversation_id
+          senderId: msg.sender_id,             // Map from sender_id
           content: msg.content,
-          createdAt: msg.created_at,
+          createdAt: msg.created_at,           // Map from created_at
           editedAt: msg.edited_at,
+          sender: {
+            username: msg.username
+          }
         };
 
+        // Broadcast the mapped message to everyone in the room
         chat.to(conversationId).emit('newMessage', newMessage);
-        console.log(`[socket] message ${msg.id} persisted and broadcast to room ${conversationId}`);
+        console.log(`[socket] message ${msg.id} from ${msg.username} broadcast to room ${conversationId}`);
       } catch (err) {
         console.error(`[socket] sendMessage DB error for conversation ${conversationId}:`, err);
         socket.emit('messageFailed', { conversationId, error: 'failed to persist message' });

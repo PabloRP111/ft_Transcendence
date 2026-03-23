@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, Users, UserPlus, User, Search } from "lucide-react";
-import { getConversations, getMessages } from "../api/chat";
+import { getConversations, getMessages, createConversation } from "../api/chat";
 import { useChat } from "../hooks/useChat";
 
 /* Mock data for front-end development - Requirement IV.3 */
@@ -25,6 +25,9 @@ export default function ChatModule() {
   const scrollRef = useRef(null);
   // Timer ref for the typingStop debounce — cleared on each keystroke
   const typingTimerRef = useRef(null);
+  
+  // Guard to prevent double initialization in React Strict Mode (Development)
+  const isInitializing = useRef(false);
 
   const socketRef = useChat(activeConversationId, {
     onNewMessage: (msg) => setMessages((prev) => [...prev, msg]),
@@ -56,9 +59,44 @@ export default function ChatModule() {
 
   // Load conversations from the backend on mount
   useEffect(() => {
-    getConversations()
-      .then(setConversations)
-      .catch((err) => console.error("[chat] failed to load conversations:", err));
+    async function initializeChat() {
+      // Prevent double-triggering in development (Strict Mode)
+      if (isInitializing.current) return;
+      isInitializing.current = true;
+
+      try {
+        // Initial fetch of user-specific conversations
+        let convs = await getConversations();
+
+        /* If the user has no conversations, attempt to join/create the global Arena.
+           The backend logic will handle finding the existing 'arena_general' 
+           room instead of creating a new one if it already exists.
+        */
+        let arena = convs.find(c => c.type === "channel");
+
+        if (!arena) {
+          console.log("[chat] No arena found. Synchronizing with global channel...");
+          // Ensure the name matches the backend normalized search string
+          arena = await createConversation("channel", [], "Arena_General");
+          // Refresh conversation list to include the newly joined channel
+          convs = await getConversations();
+        }
+        
+        setConversations(convs);
+        
+        /* Auto-select the global Arena Chat room once identified */
+        if (arena) {
+          setActiveConversationId(arena.id);
+        } else if (convs.length > 0) {
+          // Fallback if no specific channel type was found
+          setActiveConversationId(convs[0].id);
+        }
+      } catch (err) {
+        console.error("[chat] failed to load or initialize conversations:", err);
+      }
+    }
+
+    initializeChat();
   }, []);
 
   // When the user selects a conversation, load its messages and switch to the chat tab
@@ -87,6 +125,9 @@ export default function ChatModule() {
     clearTimeout(typingTimerRef.current);
     socketRef.current?.emit("typingStop", { conversationId: String(activeConversationId) });
 
+    /* Real-time emission via the WebSocket hook.
+       Events are broadcast by the server to all users in the specific conversation room.
+    */
     socketRef.current?.emit("sendMessage", {
       conversationId: String(activeConversationId),
       content: input.trim(),
@@ -155,19 +196,26 @@ export default function ChatModule() {
               <div className="text-[9px] text-cyan-100/30 uppercase tracking-[0.3em] text-center my-4">
                 --- Connection Established ---
               </div>
-              {messages.map((msg) => (
-                <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-left-2">
-                  <span className="text-[8px] text-cyan-500/60 mb-1 font-bold">USER_{msg.senderId}:</span>
-                  <div className="text-xs text-cyan-50 bg-cyan-950/40 p-2 rounded-r-md rounded-bl-md border-l-2 border-cyan-500/50 max-w-[90%]">
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
+
+              {/* Main Chat Messages Loop */}
+				{messages.map((msg) => (
+				<div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-left-2">
+					
+					{/* This is the line you need to add/update */}
+					<span className="text-[8px] text-cyan-500/60 mb-1 font-bold">
+					{msg.sender?.username || msg.senderUsername || `USER_${msg.senderId}`}:
+					</span>
+
+					<div className="text-xs text-cyan-50 bg-cyan-950/40 p-2 rounded-r-md rounded-bl-md border-l-2 border-cyan-500/50 max-w-[90%] font-mono">
+					{msg.content}
+					</div>
+				</div>
+				))}
 
               {/* Typing indicator — only shown when someone else is typing */}
               {typingUsers.size > 0 && (
                 <div className="text-[9px] text-cyan-400/60 italic animate-pulse">
-                  {[...typingUsers].map((id) => `USER_${id}`).join(", ")} typing...
+                  Someone is typing...
                 </div>
               )}
             </motion.div>
@@ -197,7 +245,7 @@ export default function ChatModule() {
               <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 {conversations.length === 0 ? (
                   <div className="text-[10px] text-cyan-100/30 uppercase tracking-[0.2em] text-center mt-8">
-                    No conversations yet
+                    No active transmissions
                   </div>
                 ) : (
                   conversations.map((conv) => (
@@ -210,10 +258,10 @@ export default function ChatModule() {
                           : 'border-cyan-500/10 bg-cyan-950/20 hover:border-cyan-500/30'}`}
                     >
                       <div className="flex items-center gap-2">
-                        {/* Presence dot — green if any participant is online */}
+                        {/* Status dot — dynamically updated via presence events */}
                         <div className={`w-1.5 h-1.5 rounded-full ${onlineUsers.size > 0 ? 'bg-green-400' : 'bg-gray-600'}`} />
-                        <span className="text-[11px] text-cyan-50">
-                          {conv.name ?? (conv.type === 'private' ? 'DM' : 'Channel')}
+                        <span className="text-[11px] text-cyan-50 font-mono">
+                          {conv.name || (conv.type === 'private' ? 'Direct_Link' : 'Public_Channel')}
                         </span>
                       </div>
                     </div>
@@ -236,12 +284,13 @@ export default function ChatModule() {
               type="text"
               value={input}
               onChange={handleTyping}
-              className="w-full bg-voidBlack border border-cyan-900/50 rounded-lg p-3 pr-12 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none transition-all"
-              placeholder="TYPE_MESSAGE..."
+              className="w-full bg-voidBlack border border-cyan-900/50 rounded-lg p-3 pr-12 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none transition-all font-mono"
+              placeholder={activeConversationId ? "TYPE_MESSAGE..." : "SELECT_CHANNEL..."}
             />
             <button 
               type="submit" 
               className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-500 hover:text-cyan-300 group-focus-within:text-cyan-300 transition-colors"
+              disabled={!activeConversationId}
             >
               <Send size={18} />
             </button>

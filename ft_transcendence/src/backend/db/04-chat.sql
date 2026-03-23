@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS chat.conversations (
   id SERIAL PRIMARY KEY,
   type TEXT NOT NULL CHECK (type IN ('private', 'channel')),
-  name TEXT,
+  name TEXT UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
