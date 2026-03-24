@@ -34,11 +34,17 @@ services:
     depends_on:
       - postgres
 
+  game:
+    build: ./backend/micro_services/game
+    networks:
+      - transcendence
+
   gateway:
     build: ./backend/gateway
     depends_on:
       - users
       - postgres
+      - game
     networks:
       - transcendence
 

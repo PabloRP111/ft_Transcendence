@@ -1,5 +1,12 @@
 import express from "express";
-import { createMatchState, stepSimulation, queuePlayerDirection, isMatchOver, getMatchWinner } from "../engine/engine.js";
+import {
+  createMatchState,
+  stepSimulation,
+  queuePlayerDirection,
+  isMatchOver,
+  getMatchWinner,
+  resetRound,
+} from "../engine/engine.js";
 import { chooseAiDirection } from "../engine/ai.js";
 
 const router = express.Router();
@@ -20,7 +27,13 @@ router.post("/:matchId/move", (req, res) => {
   const state = matches[matchId];
   if (!state) return res.status(404).json({ error: "Match not found" });
 
-  queuePlayerDirection(state, playerId, direction);
+  if (typeof playerId !== "number") {
+    return res.status(400).json({ error: "playerId must be a number" });
+  }
+
+  if (direction) {
+    queuePlayerDirection(state, playerId, direction);
+  }
 
   // IA
   const aiPlayer = state.players.find(p => p.isAi && p.alive);
@@ -39,6 +52,22 @@ router.post("/:matchId/move", (req, res) => {
   }
 
   res.json({ state, matchOver, winner });
+});
+
+router.post("/:matchId/reset-round", (req, res) => {
+  const { matchId } = req.params;
+  const state = matches[matchId];
+
+  if (!state) {
+    return res.status(404).json({ error: "Match not found" });
+  }
+
+  if (isMatchOver(state)) {
+    return res.status(400).json({ error: "Match is already finished" });
+  }
+
+  resetRound(state);
+  return res.json({ state });
 });
 
 export default router;

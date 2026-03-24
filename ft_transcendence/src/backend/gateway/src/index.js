@@ -1,5 +1,6 @@
 import express from "express";
 import authRoutes from "./routes/authRoutes.js";
+import gameRoutes from "./routes/gameRoutes.js";
 import protectedRoutes from "./routes/protectedRoutes.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 import cookieParser from "cookie-parser";
@@ -19,6 +20,7 @@ app.use(cors({
 
 // rutas públicas
 app.use("/auth", authRoutes);
+app.use("/game", gameRoutes);
 
 // todo lo que sigue requiere auth
 app.use(authMiddleware);

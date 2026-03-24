@@ -5,7 +5,7 @@ import {
   GRID_WIDTH,
   OPPOSITE_DIRECTION,
   STARTING_LIVES,
-} from "./constants";
+} from "./constants.js";
 
 function toIndex(x, y) {
   return y * GRID_WIDTH + x;

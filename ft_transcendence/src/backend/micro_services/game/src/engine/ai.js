@@ -4,7 +4,7 @@ import {
   RIGHT_TURN,
   GRID_HEIGHT,
   GRID_WIDTH,
-} from "./constants";
+} from "./constants.js";
 
 function toIndex(x, y) {
   return y * GRID_WIDTH + x;
