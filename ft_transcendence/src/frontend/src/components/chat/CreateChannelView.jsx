@@ -6,8 +6,6 @@ export default function CreateChannelView({
   setNewChannelName,
   newChannelDesc,
   setNewChannelDesc,
-  newChannelPublic,
-  setNewChannelPublic,
   creating,
   onSubmit,
   onBack,
@@ -60,19 +58,6 @@ export default function CreateChannelView({
             maxLength={200}
             className="bg-voidBlack border border-cyan-900/50 rounded-lg p-3 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none font-mono"
           />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-[8px] uppercase tracking-[0.3em] text-cyan-500/60">
-            {newChannelPublic ? "Public" : "Private"}
-          </span>
-          <button
-            type="button"
-            onClick={() => setNewChannelPublic((v) => !v)}
-            className={`w-10 h-5 rounded-full transition-colors relative ${newChannelPublic ? "bg-cyan-500/50" : "bg-cyan-900/50"}`}
-          >
-            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-cyan-50 transition-all ${newChannelPublic ? "left-5" : "left-0.5"}`} />
-          </button>
         </div>
 
         <button

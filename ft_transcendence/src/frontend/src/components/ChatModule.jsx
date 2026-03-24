@@ -51,7 +51,6 @@ export default function ChatModule() {
   // ── Create channel form ────────────────────────────────────────────────────
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelDesc, setNewChannelDesc] = useState("");
-  const [newChannelPublic, setNewChannelPublic] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const typingTimerRef = useRef(null);
@@ -198,12 +197,11 @@ export default function ChatModule() {
     if (!newChannelName.trim() || creating) return;
     setCreating(true);
     try {
-      const conv = await createConversation("channel", [], newChannelName.trim(), newChannelPublic, newChannelDesc.trim() || null);
+      const conv = await createConversation("channel", [], newChannelName.trim(), true, newChannelDesc.trim() || null);
       const convs = await getConversations();
       setConversations(convs);
       setNewChannelName("");
       setNewChannelDesc("");
-      setNewChannelPublic(true);
       openConversation(conv.id);
     } catch (err) {
       console.error("[chat] failed to create channel:", err);
@@ -262,8 +260,6 @@ export default function ChatModule() {
             setNewChannelName={setNewChannelName}
             newChannelDesc={newChannelDesc}
             setNewChannelDesc={setNewChannelDesc}
-            newChannelPublic={newChannelPublic}
-            setNewChannelPublic={setNewChannelPublic}
             creating={creating}
             onSubmit={handleCreateChannel}
             onBack={() => { setNewChannelName(""); setView("inbox"); }}
