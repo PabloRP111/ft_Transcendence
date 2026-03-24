@@ -83,10 +83,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       conversation = conversationResult.rows[0];
     }
 
-    /* 3. PARTICIPANT_SYNC: Add the user as a participant.
+    /* 3. PARTICIPANT_SYNC: Add the user as a participant
        By moving this OUTSIDE of the "if (!conversation)" block, we ensure 
-       that users who didn't create the room (User B) are still added to it.
-       'ON CONFLICT' prevents errors if the user is already a member.
+       that users who didn't create the room (User B) are still added to it
+       'ON CONFLICT' prevents errors if the user is already a member
     */
     await client.query(
       `INSERT INTO chat.conversation_participants (conversation_id, user_id, role)
