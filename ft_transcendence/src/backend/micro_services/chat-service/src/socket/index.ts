@@ -102,20 +102,35 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
 
     console.log(`[socket] user ${userId} connected (socket ${socket.id})`);
 
-    // ── Presence ──────────────────────────────────────────────────────────────
+    // ── Auto-join all rooms + Presence ────────────────────────────────────────
+    // We fetch all conversation IDs once on connect. This serves two purposes:
+    //   1. Join every room so the socket receives `newMessage` events from all
+    //      conversations — not just the one currently open in the UI. This is
+    //      what powers the unread-badge notification on the client.
+    //   2. Broadcast `userOnline` to everyone in those rooms (presence).
+    // Doing this server-side avoids the client-side race condition where
+    // `joinConversation` emits can fire before the socket is fully ready.
     const wasOffline = !presence.has(userId) || presence.get(userId)!.size === 0;
     if (!presence.has(userId)) presence.set(userId, new Set());
     presence.get(userId)!.add(socket.id);
 
-    if (wasOffline) {
-      try {
-        const conversationIds = await getUserConversationIds(userId);
+    try {
+      const conversationIds = await getUserConversationIds(userId);
+
+      // Join every room the user belongs to
+      for (const convId of conversationIds) {
+        await socket.join(convId);
+      }
+      console.log(`[socket] user ${userId} auto-joined ${conversationIds.length} room(s)`);
+
+      // Presence broadcast (only on first connection, not on additional tabs)
+      if (wasOffline) {
         for (const convId of conversationIds) {
           chat.to(convId).emit('userOnline', { userId });
         }
-      } catch (err) {
-        console.error(`[socket] failed to emit userOnline for ${userId}:`, err);
       }
+    } catch (err) {
+      console.error(`[socket] failed to auto-join rooms for ${userId}:`, err);
     }
 
     // ── joinConversation ──────────────────────────────────────────────────────

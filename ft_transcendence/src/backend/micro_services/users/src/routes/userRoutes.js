@@ -79,6 +79,32 @@ router.post("/login", async (req, res) => {
 });
 
 
+// SEARCH USERS by username (partial, case-insensitive)
+// Query param: ?q=searchTerm
+// Returns: [{ id, username }]
+router.get("/search", async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || typeof q !== "string" || q.trim() === "") {
+    return res.status(400).json({ error: "Missing search query" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, username FROM auth.users
+       WHERE username ILIKE $1
+       ORDER BY username
+       LIMIT 20`,
+      [`%${q.trim()}%`]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 // GET USER
 router.get("/:id", async (req, res) => {
 

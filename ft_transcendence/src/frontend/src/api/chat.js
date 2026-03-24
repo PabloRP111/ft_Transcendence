@@ -32,14 +32,22 @@ export async function getMessages(conversationId, { limit = 50, before, beforeId
 * participantIds: array of user IDs to add (besides the creator)
 * name: optional name for channels (REQUIRED for global Arena sync) [English Comment]
 */
-export async function createConversation(type, participantIds = [], name = null) {
+export async function createConversation(type, participantIds = [], name = null, is_public = true, description = null) {
   return apiFetch("/chat/conversations", {
     method: "POST",
-    body: JSON.stringify({ 
-      type, 
-      participantIds,
-      name // Fixed: Now the name is included in the request body [English Comment]
-    }),
+    body: JSON.stringify({ type, participantIds, name, is_public, description }),
+  });
+}
+
+// Search public channels by name
+export async function searchChannels(q) {
+  return apiFetch(`/chat/conversations/search?q=${encodeURIComponent(q)}`);
+}
+
+// Join an existing public channel
+export async function joinChannel(conversationId) {
+  return apiFetch(`/chat/conversations/${conversationId}/participants`, {
+    method: "POST",
   });
 }
 

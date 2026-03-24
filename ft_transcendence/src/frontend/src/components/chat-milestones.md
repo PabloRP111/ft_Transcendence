@@ -9,138 +9,149 @@ The backend contract is stable (M0–M9 complete). Each milestone is independent
 
 ---
 
-## F0 — Setup
+## F0 — Setup ✅
 
 **Goal:** Frontend can talk to the backend. No chat logic yet.
 
-- Install `socket.io-client`:
-  ```bash
-  npm install socket.io-client
-  ```
-- Create `src/api/chat.js` with a base fetch helper that includes:
-  ```js
-  headers: { Authorization: `Bearer ${accessToken}` }
-  ```
-- Verify `GET /api/chat/conversations` responds (empty array is fine)
-
-**Verification:** `fetch("/api/chat/conversations")` from the browser returns 200.
+- Install `socket.io-client`
+- Create `src/api/chat.js` with Authorization header
+- Verify `GET /api/chat/conversations` responds
 
 ---
 
-## F1 — Conversations
+## F1 — Conversations ✅
 
 **Goal:** User sees their real conversations.
 
 - Call `GET /api/chat/conversations` on ChatModule mount
-- Render conversation list instead of MOCK_FRIENDS
+- Render conversation list
 - On click, set the selected conversation as active
-- State needed: `conversations`, `activeConversationId`
-
-**Verification:** Create a conversation via REST and confirm it appears in the list.
 
 ---
 
-## F2 — Message History
+## F2 — Message History ✅
 
 **Goal:** Selecting a conversation loads persisted messages.
 
 - Call `GET /api/chat/conversations/:id/messages` when a conversation is selected
 - Render messages oldest → newest
-- Visually distinguish own messages vs others using `userId` from `AuthContext`
-
-**Verification:** Send a message via REST and confirm it appears when selecting the conversation.
+- Visually distinguish own messages (YOU) vs others (username)
 
 ---
 
-## F3 — WebSocket Connection
+## F3 — WebSocket Connection ✅
 
 **Goal:** Socket connected and authenticated. No messages yet.
 
-- Create `src/hooks/useChat.js`:
-  ```js
-  const socket = io("/chat", { auth: { token: accessToken } })
-  ```
-- Join the room on conversation select: emit `joinConversation`
-- Handle connection errors (expired token, server down)
-- Disconnect on component unmount
-
-**Verification:** Chat-service logs show `user X connected` when the component mounts.
+- Create `src/hooks/useChat.js`
+- Connect to `/chat` namespace with JWT in handshake
+- Join room on conversation select via `joinConversation`
+- Disconnect on unmount
 
 ---
 
-## F4 — Real-time Messaging
+## F4 — Real-time Messaging ✅
 
 **Goal:** Send and receive messages without reloading.
 
-- `handleSendMessage` emits `sendMessage` via WebSocket instead of modifying local state
+- `handleSendMessage` emits `sendMessage` via WebSocket
 - Listen for `newMessage` and append to state
-- Listen for `messageFailed` and show error to the user
+- Listen for `messageFailed`
 - Auto-scroll to bottom on new message
-
-**Verification:** Two browser tabs open — message sent from one appears in the other instantly.
 
 ---
 
-## F5 — Typing Indicators & Presence
+## F5 — Typing Indicators & Presence ✅
 
 **Goal:** Full real-time UX.
 
-- Emit `typingStart` while typing, `typingStop` when stopped (use debounce ~1s)
-- Show "X is typing..." when receiving `typingStart`
-- Show green/grey dot per user based on `userOnline` / `userOffline` events
-
-**Verification:** Type in one tab, see the indicator appear in the other.
+- Emit `typingStart`/`typingStop` with 2s debounce
+- Show "Someone is typing..." indicator
+- Green/grey presence dot per conversation
 
 ---
 
-## F6 — Create Conversation
+## M0 — Backend: Search & Join ✅
 
-**Goal:** User can start a DM from the UI.
+**Goal:** Backend endpoints to support search and join.
 
-- Call `POST /api/chat/conversations` with `{ type: "private", participantIds: [targetUserId] }`
-- Add a button or form to start a DM with another user
-- New conversation appears in the list and is selected automatically
-
-**Verification:** Create a DM between two users and exchange messages end-to-end.
+- `GET /users/search?q=` in users-service + proxy in gateway
+- `GET /conversations/search?q=` — search public channels
+- `POST /conversations/:id/participants` — join a channel
+- Fix gateway: `req.path` → `req.url` to preserve query params
+- Columns `is_public` and `description` added to `chat.conversations`
 
 ---
 
-## Summary
+## M1 — ChatModule: Stack navigation ✅
 
-| # | What | REST | WebSocket |
-|---|------|------|-----------|
-| F0 | Setup | base client | install lib |
-| F1 | Conversations | GET /conversations | — |
-| F2 | Message history | GET /messages | — |
-| F3 | WS connection | — | connect/auth |
-| F4 | Real-time messaging | — | send/receive |
-| F5 | Typing + presence | — | typing/online |
-| F6 | Create conversation | POST /conversations | — |
+**Goal:** Replace tab system with view stack.
+
+- Views: `inbox | chat | search | create`
+- Inbox as default (no forced Arena on mount)
+- Chat view with `←` + conversation name
+- Arena_General still find-or-created on first load
+
+---
+
+## M2 — ChatModule: Search view ✅
+
+**Goal:** Search users and channels from the ChatModule.
+
+- Debounced search (300ms), parallel user + channel queries
+- Users: username + `[DM]` button
+- Channels: name + `[Join]` or `[Open]`
+
+---
+
+## M3 — ChatModule: Create channel ✅
+
+**Goal:** Create a new channel from the ChatModule.
+
+- `+` button opens create view
+- Form: name (required), description (optional), public/private toggle
+- On submit: creates channel and opens it
+
+---
+
+## Pending
+
+### ChatModule
+- **M4** — Badge de mensajes no leídos (contador en conversaciones no activas)
+- Revertir fix temporal de layout en `Landing.jsx` (`hidden lg:flex`)
+- UI para editar mensajes (backend ya listo)
+
+### `/profile` — módulo obligatorio del subject
+- Tab "Friends" — lista, add/remove
+- Vista `/profile/:id` — perfil público + botón DM + botón Add friend
+- Sistema de amigos en users-service (tabla DB + endpoints list/add/remove)
 
 ---
 
 ## Backend contract reference
 
-**REST endpoints (via `/api/chat/`):**
-- `POST /conversations` — create DM or channel
+**REST (via `/api/chat/`):**
+- `POST /conversations` — create DM or channel (`type`, `name`, `is_public`, `description`, `participantIds`)
 - `GET /conversations` — list user's conversations
+- `GET /conversations/search?q=` — search public channels
+- `POST /conversations/:id/participants` — join a channel
 - `GET /conversations/:id/messages?limit=50&before=<ts>&beforeId=<id>` — paginated history
-- `POST /conversations/:id/messages` — send message
+- `POST /conversations/:id/messages` — send message (REST fallback)
 - `PATCH /conversations/:id/messages/:messageId` — edit message
+
+**REST (via `/api/`):**
+- `GET /users/search?q=` — search users by username
 
 **Socket events (client → server):**
 - `joinConversation` — `{ conversationId }`
 - `leaveConversation` — `{ conversationId }`
 - `sendMessage` — `{ conversationId, content }`
-- `typingStart` — `{ conversationId }`
-- `typingStop` — `{ conversationId }`
+- `typingStart` / `typingStop` — `{ conversationId }`
 
 **Socket events (server → client):**
-- `newMessage` — `{ id, conversationId, senderId, content, createdAt, editedAt }`
+- `newMessage` — `{ id, conversationId, senderId, content, createdAt, editedAt, sender: { username } }`
 - `messageEdited` — same shape as newMessage
 - `messageFailed` — `{ conversationId, error }`
 - `rateLimitExceeded` — `{ conversationId, retryAfter }`
-- `userOnline` — `{ userId }`
-- `userOffline` — `{ userId }`
-- `typingStart` — `{ conversationId, userId }`
-- `typingStop` — `{ conversationId, userId }`
+- `userOnline` / `userOffline` — `{ userId }`
+- `typingStart` / `typingStop` — `{ conversationId, userId }`
