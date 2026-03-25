@@ -18,7 +18,7 @@ router.use(authMiddleware);
 // adding x-user-id so chat-service knows who is making the request
 router.all("*", async (req, res) => {
 
-  const targetUrl = `${CHAT_SERVICE}${req.path}`;
+  const targetUrl = `${CHAT_SERVICE}${req.url}`;
 
   try {
     const response = await fetch(targetUrl, {

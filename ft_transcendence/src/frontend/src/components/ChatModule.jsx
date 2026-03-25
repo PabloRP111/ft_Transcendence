@@ -1,17 +1,28 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, Users, UserPlus, User, Search } from "lucide-react";
 import { getConversations, getMessages } from "../api/chat";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
+import { getMyIdFromToken, getLastOpened, saveLastOpened } from "../utils/chatStorage";
+import InboxView from "./chat/InboxView";
+import ChatView from "./chat/ChatView";
+import SearchView from "./chat/SearchView";
+import CreateChannelView from "./chat/CreateChannelView";
 
-/* Mock data for front-end development - Requirement IV.3 */
-const MOCK_FRIENDS = [
-  { id: 1, name: "Neon_Rider", status: "online" },
-  { id: 2, name: "Bit_Crusher", status: "offline" },
-  { id: 3, name: "Flynn_Grid", status: "online" },
-];
-
+/*
+ * ChatModule — top-level coordinator for the chat panel
+ *
+ * Owns all shared state and side-effects; passes data and callbacks
+ * down to the four view components (Inbox, Chat, Search, CreateChannel)
+ *
+ * Views (navigation stack):
+ *   "inbox"  — list of conversations (default)
+ *   "chat"   — active conversation
+ *   "search" — search users/channels
+ *   "create" — create new channel
+ */
 export default function ChatModule() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");

@@ -156,9 +156,17 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
 
     presence.get(userId)!.add(socket.id);
 
-    if (wasOffline) {
-      try {
-        const conversationIds = await getUserConversationIds(userId);
+    try {
+      const conversationIds = await getUserConversationIds(userId);
+
+      // Join every room the user belongs to
+      for (const convId of conversationIds) {
+        await socket.join(convId);
+      }
+      console.log(`[socket] user ${userId} auto-joined ${conversationIds.length} room(s)`);
+
+      // Presence broadcast (only on first connection, not on additional tabs)
+      if (wasOffline) {
         for (const convId of conversationIds) {
           console.log(`[socket] emitting userOnline for user ${userId} in conversation ${convId}`);
           chat.to(convId).emit('userOnline', { userId });
@@ -226,10 +234,10 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
 
         chat.to(conversationId).emit('newMessage', {
           id: msg.id,
-          conversationId: msg.conversation_id,
-          senderId: msg.sender_id,
+          conversationId: msg.conversation_id, // Map from conversation_id
+          senderId: msg.sender_id,             // Map from sender_id
           content: msg.content,
-          createdAt: msg.created_at,
+          createdAt: msg.created_at,           // Map from created_at
           editedAt: msg.edited_at,
         });
 
