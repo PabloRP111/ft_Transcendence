@@ -11,8 +11,76 @@ import fetch from "node-fetch";
 import { v4 as uuidv4 } from "uuid";
 
 const USERS_SERVICE = process.env.USERS_SERVICE || "http://users:3002";
-
+const CHAT_SERVICE = process.env.CHAT_SERVICE || "http://chat:3003";
 const router = express.Router();
+
+// LOGIN
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password)
+    return res.status(400).json({ error: "Missing credentials" });
+
+  try {
+    const response = await fetch(`${USERS_SERVICE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok)
+      return res.status(response.status).json(data);
+
+    const oldSession = await findSessionByUser(data.id);
+
+    // Generar session_id único por login
+    const sessionId = uuidv4();
+
+    // generar tokens
+    const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username, sessionId);
+    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id, sessionId);
+
+    // almacenar sesión
+    await storeSession(data.id, {
+      session_id: sessionId,
+      refresh_expires_at: refreshExp,
+      last_access_expires_at: accessExp
+    });
+
+    
+    // Emitir logout al socket anterior si existe
+    if (oldSession && oldSession.session_id !== sessionId) {
+      const resp = await fetch(`${CHAT_SERVICE}/force-logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ userId: data.id })
+      });
+
+      if (!resp.ok) {
+        console.error("force-logout failed", await resp.text());
+      }
+    }
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    return res.json({
+      accessToken,
+      username: data.username
+    });
+
+  } catch (error) {
+    console.error("Communication Error:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
 
 // REGISTER sigue igual
 router.post("/register", async (req, res) => {
@@ -42,56 +110,6 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("Registration crash:", err);
     return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// LOGIN
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password)
-    return res.status(400).json({ error: "Missing credentials" });
-
-  try {
-    const response = await fetch(`${USERS_SERVICE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok)
-      return res.status(response.status).json(data);
-
-    // Generar session_id único por login
-    const sessionId = uuidv4();
-
-    // generar tokens
-    const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username, sessionId);
-    const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id, sessionId);
-
-    // almacenar sesión
-    await storeSession(data.id, {
-      session_id: sessionId,
-      refresh_expires_at: refreshExp,
-      last_access_expires_at: accessExp
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    return res.json({
-      accessToken,
-      username: data.username
-    });
-
-  } catch (error) {
-    console.error("Communication Error:", error);
-    return res.status(503).json({ error: "Service Unavailable" });
   }
 });
 

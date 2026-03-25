@@ -16,8 +16,10 @@ export async function apiFetch(endpoint, options = {}) {
   });
 
   if (!res.ok) {
-    if (res.status === 401) // notificar al contexto global que la sesión expiró
-      window.dispatchEvent(new CustomEvent("session-expired"));
+    if (res.status === 401) {
+      window.dispatchEvent(new Event("session-expired"));
+      throw new Error("Unauthorized");
+    }
 
     const text = await res.text();
     throw new Error(text);

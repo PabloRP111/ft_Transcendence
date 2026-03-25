@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, Users, UserPlus, User, Search } from "lucide-react";
 import { getConversations, getMessages } from "../api/chat";
 import { useChat } from "../hooks/useChat";
+import { useAuth } from "../context/AuthContext.jsx";
 
 /* Mock data for front-end development - Requirement IV.3 */
 const MOCK_FRIENDS = [
@@ -25,6 +26,8 @@ export default function ChatModule() {
   const scrollRef = useRef(null);
   // Timer ref for the typingStop debounce — cleared on each keystroke
   const typingTimerRef = useRef(null);
+  const { accessToken, isAuthenticated, loading } = useAuth();
+  console.log("Auth state:", { accessToken, isAuthenticated, loading });
 
   const socketRef = useChat(activeConversationId, {
     onNewMessage: (msg) => setMessages((prev) => [...prev, msg]),
@@ -43,27 +46,35 @@ export default function ChatModule() {
       }),
 
     // Server emits these on socket connect/disconnect — no client action needed
-    onUserOnline: ({ userId }) =>
-      setOnlineUsers((prev) => new Set(prev).add(userId)),
+    onUserOnline: ({ userId }) => {
+      console.log('[chat] userOnline event received:', userId);
+      setOnlineUsers((prev) => new Set(prev).add(userId));
+    },
 
-    onUserOffline: ({ userId }) =>
+    onUserOffline: ({ userId }) => {
+      console.log('[chat] userOffline event received:', userId);
       setOnlineUsers((prev) => {
         const next = new Set(prev);
         next.delete(userId);
         return next;
-      }),
+      });
+    },
   });
 
   // Load conversations from the backend on mount
   useEffect(() => {
-    getConversations()
-      .then(setConversations)
-      .catch((err) => console.error("[chat] failed to load conversations:", err));
-  }, []);
+    if (!loading && isAuthenticated) {
+      console.log("Token listo para cargar conversaciones:", accessToken);
+      getConversations()
+        .then(setConversations)
+        .catch((err) => console.error("[chat] failed to load conversations:", err));
+    }
+  }, [loading, isAuthenticated]);
 
   // When the user selects a conversation, load its messages and switch to the chat tab
   useEffect(() => {
-    if (!activeConversationId) return;
+    if (!activeConversationId)
+      return;
 
     getMessages(activeConversationId)
       .then(setMessages)

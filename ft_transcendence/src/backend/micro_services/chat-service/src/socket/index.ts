@@ -6,6 +6,8 @@ import { isParticipant } from '../db/helpers';
 import { validateContent } from '../utils/validate';
 import { rateLimiter } from './rateLimiter';
 
+/* ──────────────── TYPES ──────────────── */
+
 interface JwtPayload {
   id: number;
 }
@@ -14,13 +16,45 @@ interface SocketData {
   userId: string;
 }
 
+interface ClientToServerEvents {
+  joinConversation: (
+    payload: { conversationId: string },
+    ack?: (res: { ok: boolean; error?: string }) => void
+  ) => void;
+
+  leaveConversation: (payload: { conversationId: string }) => void;
+
+  sendMessage: (payload: { conversationId: string; content: string }) => void;
+
+  typingStart: (payload: { conversationId: string }) => void;
+  typingStop: (payload: { conversationId: string }) => void;
+}
+
+interface ServerToClientEvents {
+  newMessage: (msg: any) => void;
+  messageFailed: (err: any) => void;
+  rateLimitExceeded: (data: any) => void;
+
+  typingStart: (data: any) => void;
+  typingStop: (data: any) => void;
+
+  userOnline: (data: { userId: string }) => void;
+  userOffline: (data: { userId: string }) => void;
+
+  "force-logout": () => void;
+}
+
+/* ──────────────── STATE ──────────────── */
+
 let chatNamespace: ReturnType<InstanceType<typeof SocketServer>['of']> | null = null;
 
-export function getChatNamespace(): ReturnType<InstanceType<typeof SocketServer>['of']> | null {
+export function getChatNamespace() {
   return chatNamespace;
 }
 
 const presence = new Map<string, Set<string>>();
+
+/* ──────────────── HELPERS ──────────────── */
 
 async function getUserConversationIds(userId: string): Promise<string[]> {
   const result = await pool.query<{ conversation_id: string }>(
@@ -51,6 +85,8 @@ function isJwtPayload(payload: unknown): payload is JwtPayload {
   );
 }
 
+/* ──────────────── MAIN ──────────────── */
+
 export function attachSocketIO(httpServer: HttpServer): SocketServer {
   const allowedOrigin = process.env.FRONTEND_URL || 'https://localhost:8443';
 
@@ -64,29 +100,32 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
   const chat = io.of('/chat');
   chatNamespace = chat;
 
-  // ── Handshake middleware — JWT validation ─────────────────────────────────────
-  chat.use((socket: Socket, next: (err?: Error) => void) => {
+  // 🔐 AUTH MIDDLEWARE
+  chat.use((
+    socket: Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketData>,
+    next: (err?: Error) => void
+  ) => {
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
-      console.error('[socket] JWT_SECRET is not set');
       return next(new Error('server misconfiguration'));
     }
 
-    const token = (socket.handshake.auth as Record<string, unknown>)?.token;
+    const token = socket.handshake.auth?.token;
+    console.log('[socket] received token:', token);
 
-    if (typeof token !== 'string' || token === '') {
+    if (typeof token !== 'string' || !token) {
       return next(new Error('missing token'));
     }
 
     try {
-      const payload = jwt.verify(token, secret) as unknown;
+      const payload = jwt.verify(token, secret);
 
       if (!isJwtPayload(payload)) {
         return next(new Error('invalid token payload'));
       }
 
-      (socket.data as SocketData).userId = String(payload.id);
+      socket.data.userId = String(payload.id);
       next();
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {
@@ -96,152 +135,121 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
     }
   });
 
-  chat.on('connection', async (socket: Socket) => {
-    const userId = (socket.data as SocketData).userId;
+  // 🔌 CONNECTION
+  chat.on('connection', async (
+    socket: Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketData>
+  ) => {
+    const userId = socket.data.userId;
     const userIdInt = parseInt(userId, 10);
 
-    console.log(`[socket] user ${userId} connected (socket ${socket.id})`);
+    socket.join(`user-${userId}`);
+    console.log(`[socket] joined personal room user-${userId}`);
+    console.log(`[socket] user ${userId} connected (${socket.id})`);
 
-    // ── Presence ──────────────────────────────────────────────────────────────
+    /* ───── Presence ───── */
+
     const wasOffline = !presence.has(userId) || presence.get(userId)!.size === 0;
-    if (!presence.has(userId)) presence.set(userId, new Set());
+
+    if (!presence.has(userId)) {
+      presence.set(userId, new Set());
+    }
+
     presence.get(userId)!.add(socket.id);
 
     if (wasOffline) {
       try {
         const conversationIds = await getUserConversationIds(userId);
         for (const convId of conversationIds) {
+          console.log(`[socket] emitting userOnline for user ${userId} in conversation ${convId}`);
           chat.to(convId).emit('userOnline', { userId });
         }
       } catch (err) {
-        console.error(`[socket] failed to emit userOnline for ${userId}:`, err);
+        console.error('userOnline error:', err);
       }
     }
 
-    // ── joinConversation ──────────────────────────────────────────────────────
-    socket.on(
-      'joinConversation',
-      async (
-        payload: unknown,
-        ack?: (result: { ok: boolean; error?: string }) => void,
-      ) => {
-        if (!hasStringField(payload, 'conversationId')) {
-          ack?.({ ok: false, error: 'invalid payload: conversationId required' });
+    /* ───── Events ───── */
+
+    socket.on('joinConversation', async (payload, ack) => {
+      const { conversationId } = payload;
+
+      try {
+        const allowed = await isParticipant(conversationId, userIdInt);
+
+        if (!allowed) {
+          ack?.({ ok: false, error: 'not a participant' });
           return;
         }
 
-        const { conversationId } = payload as { conversationId: string };
-
-        try {
-          const allowed = await isParticipant(conversationId, userIdInt);
-          if (!allowed) {
-            ack?.({ ok: false, error: 'not a participant in this conversation' });
-            return;
-          }
-
-          await socket.join(conversationId);
-          console.log(`[socket] user ${userId} joined room ${conversationId}`);
-          ack?.({ ok: true });
-        } catch (err) {
-          console.error('[socket] joinConversation error:', err);
-          ack?.({ ok: false, error: 'internal error' });
-        }
-      },
-    );
-
-    // ── leaveConversation ─────────────────────────────────────────────────────
-    socket.on('leaveConversation', (payload: unknown) => {
-      if (!hasStringField(payload, 'conversationId')) return;
-      const { conversationId } = payload as { conversationId: string };
-      socket.leave(conversationId);
-      console.log(`[socket] user ${userId} left room ${conversationId}`);
+        await socket.join(conversationId);
+        ack?.({ ok: true });
+      } catch {
+        ack?.({ ok: false, error: 'internal error' });
+      }
     });
 
-    // ── sendMessage ───────────────────────────────────────────────────────────
-    socket.on('sendMessage', async (payload: unknown) => {
-      if (!hasStringField(payload, 'conversationId')) {
-        socket.emit('messageFailed', { error: 'invalid payload: conversationId required' });
-        return;
-      }
+    socket.on('leaveConversation', ({ conversationId }) => {
+      socket.leave(conversationId);
+    });
 
-      const { conversationId } = payload as { conversationId: string };
-
-      const contentError = validateContent((payload as Record<string, unknown>).content);
+    socket.on('sendMessage', async ({ conversationId, content }) => {
+      const contentError = validateContent(content);
       if (contentError) {
         socket.emit('messageFailed', { conversationId, error: contentError });
         return;
       }
 
-      const { content } = payload as { conversationId: string; content: string };
-
       const rateResult = rateLimiter.consume(userId, conversationId);
       if (!rateResult.allowed) {
-        socket.emit('rateLimitExceeded', { conversationId, retryAfter: rateResult.retryAfter });
+        socket.emit('rateLimitExceeded', {
+          conversationId,
+          retryAfter: rateResult.retryAfter
+        });
         return;
       }
 
       try {
         const allowed = await isParticipant(conversationId, userIdInt);
         if (!allowed) {
-          socket.emit('messageFailed', { conversationId, error: 'not a participant in this conversation' });
+          socket.emit('messageFailed', { conversationId, error: 'not allowed' });
           return;
         }
-      } catch (err) {
-        console.error('[socket] sendMessage participant check error:', err);
-        socket.emit('messageFailed', { conversationId, error: 'internal error' });
-        return;
-      }
 
-      try {
-        const result = await pool.query<{
-          id: number;
-          conversation_id: number;
-          sender_id: number;
-          content: string;
-          created_at: string;
-          edited_at: string | null;
-        }>(
+        const result = await pool.query(
           `INSERT INTO chat.messages (conversation_id, sender_id, content)
            VALUES ($1, $2, $3)
-           RETURNING id, conversation_id, sender_id, content, created_at, edited_at`,
-          [conversationId, userIdInt, content.trim()],
+           RETURNING *`,
+          [conversationId, userIdInt, content.trim()]
         );
 
         const msg = result.rows[0];
-        const newMessage = {
+
+        chat.to(conversationId).emit('newMessage', {
           id: msg.id,
           conversationId: msg.conversation_id,
           senderId: msg.sender_id,
           content: msg.content,
           createdAt: msg.created_at,
           editedAt: msg.edited_at,
-        };
+        });
 
-        chat.to(conversationId).emit('newMessage', newMessage);
-        console.log(`[socket] message ${msg.id} persisted and broadcast to room ${conversationId}`);
       } catch (err) {
-        console.error(`[socket] sendMessage DB error for conversation ${conversationId}:`, err);
-        socket.emit('messageFailed', { conversationId, error: 'failed to persist message' });
+        console.error('sendMessage error:', err);
+        socket.emit('messageFailed', { conversationId, error: 'db error' });
       }
     });
 
-    // ── typingStart / typingStop ──────────────────────────────────────────────
-    socket.on('typingStart', (payload: unknown) => {
-      if (!hasStringField(payload, 'conversationId')) return;
-      const { conversationId } = payload as { conversationId: string };
+    socket.on('typingStart', ({ conversationId }) => {
       socket.to(conversationId).emit('typingStart', { conversationId, userId });
     });
 
-    socket.on('typingStop', (payload: unknown) => {
-      if (!hasStringField(payload, 'conversationId')) return;
-      const { conversationId } = payload as { conversationId: string };
+    socket.on('typingStop', ({ conversationId }) => {
       socket.to(conversationId).emit('typingStop', { conversationId, userId });
     });
 
-    // ── Disconnect ────────────────────────────────────────────────────────────
-    socket.on('disconnect', async (reason) => {
-      console.log(`[socket] user ${userId} disconnected (socket ${socket.id}, reason: ${reason})`);
+    /* ───── Disconnect ───── */
 
+    socket.on('disconnect', async () => {
       presence.get(userId)?.delete(socket.id);
 
       if (!presence.has(userId) || presence.get(userId)!.size === 0) {
@@ -253,7 +261,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
             chat.to(convId).emit('userOffline', { userId });
           }
         } catch (err) {
-          console.error(`[socket] failed to emit userOffline for ${userId}:`, err);
+          console.error('userOffline error:', err);
         }
       }
     });
@@ -262,6 +270,6 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
   return io;
 }
 
-export function getPresence(): Map<string, Set<string>> {
+export function getPresence() {
   return presence;
 }

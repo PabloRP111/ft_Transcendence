@@ -21,8 +21,10 @@ export async function getConversations() {
 //Fetch message history for a conversation, oldest → newest.
 export async function getMessages(conversationId, { limit = 50, before, beforeId } = {}) {
   const params = new URLSearchParams({ limit });
-  if (before) params.set("before", before);
-  if (beforeId) params.set("beforeId", beforeId);
+  if (before)
+    params.set("before", before);
+  if (beforeId)
+    params.set("beforeId", beforeId);
 
   return apiFetch(`/chat/conversations/${conversationId}/messages?${params}`);
 }

@@ -34,7 +34,10 @@ export async function refresh() {
     credentials: "include"
   });
 
-  if (!res.ok) throw new Error(await res.text());
+  if (res.status === 401) {
+    window.dispatchEvent(new Event("session-expired"));
+    throw new Error("Unauthorized");
+  }
   return res.json();
 }
 

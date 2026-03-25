@@ -9,7 +9,6 @@ export function SocketProvider({ children }) {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Si no hay token → no hay socket
     if (!accessToken) {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -18,32 +17,28 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    // Crear socket
-    const socket = io(window.location.origin, {
-      path: "/ws", // opcional si usas nginx
-      autoConnect: false,
-      transports: ["websocket"]
+    if (socketRef.current)
+      return;
+
+    const socket = io("https://localhost:8443/chat", {
+      transports: ["websocket"],
+      auth: { token: accessToken }
     });
 
-    socket.connect();
-
-    // Autenticación
-    socket.emit("auth", accessToken);
-
-    // 🔥 Evento importante
     socket.on("force-logout", () => {
-      logoutUser();
+      window.dispatchEvent(new Event("session-expired"));
     });
 
     socketRef.current = socket;
 
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
   }, [accessToken]);
 
   return (
-    <SocketContext.Provider value={socketRef.current}>
+    <SocketContext.Provider value={socketRef}>
       {children}
     </SocketContext.Provider>
   );

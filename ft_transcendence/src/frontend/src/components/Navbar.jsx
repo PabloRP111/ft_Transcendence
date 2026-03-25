@@ -21,6 +21,7 @@ const glitchHover = {
 
 export default function Navbar() {
   const { isAuthenticated, logoutUser, loading } = useAuth();
+  console.log("AUTH STATE:", isAuthenticated);
   const navigate = useNavigate();
   const location = useLocation();
 
