@@ -5,24 +5,16 @@ import { useAuth } from "./AuthContext";
 const SocketContext = createContext();
 
 export function SocketProvider({ children }) {
-  const { accessToken, logoutUser } = useAuth();
+  const { accessToken } = useAuth();
   const socketRef = useRef(null);
 
   useEffect(() => {
-    if (!accessToken) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      return;
-    }
-
-    if (socketRef.current)
-      return;
+    if (!accessToken) return;
+    if (socketRef.current) return;
 
     const socket = io("https://localhost:8443/chat", {
       transports: ["websocket"],
-      auth: { token: accessToken }
+      auth: { token: accessToken },
     });
 
     socket.on("force-logout", () => {
