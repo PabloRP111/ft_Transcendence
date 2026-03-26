@@ -1,2 +1,0 @@
-CREATE DATABASE users_db;
-CREATE DATABASE gateway_db;

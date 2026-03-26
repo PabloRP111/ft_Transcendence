@@ -1,18 +1,12 @@
-const BASE_URL = window.location.origin + "/api";
+import { apiFetch } from "./client";
 
-export async function getCurrentUser(accessToken) {
-  const res = await fetch(`${BASE_URL}/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function getCurrentUser() {
+  return apiFetch("/me");
+}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text);
-  }
-
-  return res.json();
+// Search users by username (partial, case-insensitive)
+export function searchUsers(q) {
+  return apiFetch(`/users/search?q=${encodeURIComponent(q)}`);
 }
 
 export async function editUser(accessToken, userData) {

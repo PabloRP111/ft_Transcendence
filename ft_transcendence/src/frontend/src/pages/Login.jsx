@@ -21,7 +21,7 @@ const itemVariants = {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginUser, logoutUser } = useAuth();
+  const { loginUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,10 +37,6 @@ export default function LoginPage() {
       if (data.error) {
         setMsg(data.error);
         return;
-      }
-
-      if (data.username) {
-        localStorage.setItem("username", data.username);
       }
 
       loginUser(data.accessToken);

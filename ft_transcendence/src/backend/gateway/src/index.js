@@ -1,31 +1,20 @@
 import express from "express";
-import authRoutes from "./routes/authRoutes.js";
-import protectedRoutes from "./routes/protectedRoutes.js";
-import authMiddleware from "./middleware/authMiddleware.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import authRoutes from "./routes/authRoutes.js";
+import protectedRoutes from "./routes/protectedRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import authMiddleware from "./middleware/authMiddleware.js";
 
 const app = express();
 
-app.set("trust proxy", 1);
 app.use(cookieParser());
 app.use(express.json());
+app.use(cors({ origin: "https://localhost:8443", credentials: true }));
 
-// permitir el dev server de React
-app.use(cors({
-  origin: "http://localhost:5173",
-  credentials: true // para enviar cookies httpOnly
-}));
-
-// rutas públicas
 app.use("/auth", authRoutes);
-
-// todo lo que sigue requiere auth
 app.use(authMiddleware);
-
-// rutas protegidas
 app.use("/", protectedRoutes);
+app.use("/chat", chatRoutes);
 
-app.listen(3000, () =>
-  console.log("Gateway running on port 3000")
-);
+app.listen(3000, () => console.log("Gateway running on port 3000"));

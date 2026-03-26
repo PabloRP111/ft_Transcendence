@@ -1,16 +1,17 @@
 import jwt from "jsonwebtoken";
 import { pool } from "./db.js";
-import crypto from "crypto";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
 // token corto (login normal)
-export function generateAccessToken(userId) {
+export function generateAccessToken(userId, sessionId) {
   const expMs = Date.now() + 15 * 60 * 1000; // 15 min
 
   const token = jwt.sign(
-    { id: userId, expMs },
+    { id: userId, 
+      session_id: sessionId,
+      expMs },
     ACCESS_SECRET,
     { expiresIn: "15m" }
   );
@@ -26,7 +27,7 @@ export function generateRefreshToken(userId, username, sessionId) {
     {
       id: userId,
       username,
-      sid: sessionId,
+      session_id: sessionId,
       expMs
     },
     REFRESH_SECRET,
@@ -49,7 +50,7 @@ export function verifyRefreshToken(token) {
 export async function storeSession(userId, session) {
   await pool.query(
     `
-    INSERT INTO sessions
+    INSERT INTO sessions.sessions
     (user_id, session_id, refresh_expires_at, last_access_expires_at, created_at)
     VALUES ($1,$2,$3,$4,$5)
     ON CONFLICT (user_id)
@@ -70,14 +71,14 @@ export async function storeSession(userId, session) {
 
 export async function deleteSession(userId) {
   await pool.query(
-    "DELETE FROM sessions WHERE user_id = $1",
+    "DELETE FROM sessions.sessions WHERE user_id = $1",
     [userId]
   );
 }
 
 export async function findSessionByUser(userId) {
   const result = await pool.query(
-    "SELECT * FROM sessions WHERE user_id = $1",
+    "SELECT * FROM sessions.sessions WHERE user_id = $1",
     [userId]
   );
 

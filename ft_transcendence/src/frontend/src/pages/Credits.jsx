@@ -58,8 +58,6 @@ export default function CreditsPage() {
       >
 
         <div className="flex flex-col items-center gap-16">
-
-          {/* TITLE */}
           <motion.h1
             variants={itemVariants}
             className="credits-tron-title mt-50 sm:-mt-20 "

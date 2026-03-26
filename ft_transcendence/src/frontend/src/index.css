@@ -114,6 +114,9 @@ a {
   }
 }
 
+@keyframes scan {
+  100% { transform: translateX(100%); }
+}
 
 .cycle-a {
   animation: cycleRunA 12s linear infinite;
@@ -291,7 +294,7 @@ a {
     line-height: 1;
     position: relative; /* o absolute si quieres flotar sobre panel */
     z-index: 20; /* sobre fondo pero debajo de otros elementos si hace falta */
-    animation: pulseBlue 1.6s ease-in-out infinite;
+    animation: pulseBlue 2s ease-in-out infinite;
   }
 
   .credits-tron-title {
@@ -357,24 +360,43 @@ a {
       inset 0 0 18px rgba(0, 242, 255, 0.2);
   }
 
-  .neon-button-orange {
-    border-color: rgba(255, 140, 0, 0.68);
-    color: #ffd8b0;
-    background: rgba(36, 16, 0, 0.44);
-    box-shadow:
-      0 0 8px rgba(255, 140, 0, 0.45),
-      inset 0 0 10px rgba(255, 140, 0, 0.2);
-  }
-
-  .neon-button-orange:hover {
-    background: rgba(255, 140, 0, 0.2);
-    box-shadow:
-      0 0 14px rgba(255, 140, 0, 0.75),
-      inset 0 0 18px rgba(255, 140, 0, 0.25);
-  }
-
   .neon-profile-pulse {
-    animation: pulseBlue 1.8s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(6, 182, 212, 0.5); /* cyan-500/50 */
+    background-color: rgba(8, 51, 68, 0.2);   /* cyan-950/20 */
+    padding: 0.5rem 1rem;                     /* px-4 py-2 */
+    color: #22d3ee;                           /* cyan-400 */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 5px rgba(6, 182, 212, 0.2);
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  .neon-profile-pulse:hover {
+    border-color: #22d3ee;                    /* cyan-400 */
+    background-color: rgba(22, 78, 99, 0.4);  /* cyan-900/40 */
+    color: #ecfeff;                           /* cyan-50 */
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), inset 0 0 10px rgba(6, 182, 212, 0.3);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  }
+
+  /* El efecto de escaneo */
+  .neon-profile-pulse::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(34, 211, 238, 0.2), /* cyan-400/20 */
+      transparent
+    );
+    animation: scan 4s infinite;
   }
 
   .subroutine-link {

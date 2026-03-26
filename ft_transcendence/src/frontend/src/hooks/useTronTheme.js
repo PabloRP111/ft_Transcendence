@@ -20,7 +20,7 @@ export default function useTronTheme() {
       root.style.setProperty("--tron-border", "rgba(255,140,0,0.45)");
     }
     // GAME (rojo)
-    else if (path.startsWith("/game")) {
+    else if (path.startsWith("/online-game") || path.startsWith("/ai-game")) {
 
       root.style.setProperty("--tron-primary", "rgba(255,60,60,0.35)");
       root.style.setProperty("--tron-primary-strong", "rgba(255,60,60,0.55)");

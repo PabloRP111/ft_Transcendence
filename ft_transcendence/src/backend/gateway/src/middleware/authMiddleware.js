@@ -2,7 +2,7 @@ import { verifyAccessToken, findSessionByUser } from "../jwt.js";
 
 export default async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer "))
+  if (!authHeader || !authHeader.startsWith("Bearer "))
     return res.status(401).json({ error: "Missing token" });
 
   const token = authHeader.split(" ")[1];
@@ -16,13 +16,16 @@ export default async function authMiddleware(req, res, next) {
     return res.status(401).json({ error: "Invalid access token" });
   }
 
+  if (!payload)
+    return res.status(401).json({ error: "Invalid token payload" });
+
   const session = await findSessionByUser(payload.id);
   if (!session)
     return res.status(401).json({ error: "No session" });
 
-  // SOLO el último access token es válido
-  if (payload.expMs !== session.last_access_expires_at)
-    return res.status(401).json({ error: "Session replaced" });
+  // Validación de sesión activa
+  if (payload.session_id !== session.session_id)
+    return res.status(401).json({ error: "Invalid session" });
 
   req.user = payload;
   next();

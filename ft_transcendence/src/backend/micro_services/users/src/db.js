@@ -6,7 +6,7 @@ export const pool = new Pool({
   host: "postgres",
   user: "transcendence",
   password: "transcendence",
-  database: "users_db",
+  database: "transcendence",
   port: 5432
 });
 

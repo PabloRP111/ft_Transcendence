@@ -1,20 +1,98 @@
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, Users, UserPlus, User, Search } from "lucide-react";
+import { getConversations, getMessages } from "../api/chat";
+import { useChat } from "../hooks/useChat";
+import { useAuth } from "../context/AuthContext.jsx";
+import { getMyIdFromToken, getLastOpened, saveLastOpened } from "../utils/chatStorage";
+import InboxView from "./chat/InboxView";
+import ChatView from "./chat/ChatView";
+import SearchView from "./chat/SearchView";
+import CreateChannelView from "./chat/CreateChannelView";
 
-/* Mock data for front-end development - Requirement IV.3 */
-const MOCK_FRIENDS = [
-  { id: 1, name: "Neon_Rider", status: "online" },
-  { id: 2, name: "Bit_Crusher", status: "offline" },
-  { id: 3, name: "Flynn_Grid", status: "online" },
-];
-
+/*
+ * ChatModule — top-level coordinator for the chat panel
+ *
+ * Owns all shared state and side-effects; passes data and callbacks
+ * down to the four view components (Inbox, Chat, Search, CreateChannel)
+ *
+ * Views (navigation stack):
+ *   "inbox"  — list of conversations (default)
+ *   "chat"   — active conversation
+ *   "search" — search users/channels
+ *   "create" — create new channel
+ */
 export default function ChatModule() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [activeTab, setActiveTab] = useState("chat"); // 'chat' or 'friends' 
+  const [activeTab, setActiveTab] = useState("chat"); // 'chat' or 'friends'
   const [searchTerm, setSearchTerm] = useState("");
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  // Set of userIds currently online (populated by userOnline/userOffline events)
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  // Set of userIds currently typing in the active conversation
+  const [typingUsers, setTypingUsers] = useState(new Set());
   const scrollRef = useRef(null);
+  // Timer ref for the typingStop debounce — cleared on each keystroke
+  const typingTimerRef = useRef(null);
+  const { accessToken, isAuthenticated, loading } = useAuth();
+  console.log("Auth state:", { accessToken, isAuthenticated, loading });
+
+  const socketRef = useChat(activeConversationId, {
+    onNewMessage: (msg) => setMessages((prev) => [...prev, msg]),
+    onMessageFailed: (err) => console.error("[chat] message failed:", err),
+
+    // Another user started typing in the active conversation
+    onTypingStart: ({ userId }) =>
+      setTypingUsers((prev) => new Set(prev).add(userId)),
+
+    // Another user stopped typing — remove them from the set
+    onTypingStop: ({ userId }) =>
+      setTypingUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      }),
+
+    // Server emits these on socket connect/disconnect — no client action needed
+    onUserOnline: ({ userId }) => {
+      console.log('[chat] userOnline event received:', userId);
+      setOnlineUsers((prev) => new Set(prev).add(userId));
+    },
+
+    onUserOffline: ({ userId }) => {
+      console.log('[chat] userOffline event received:', userId);
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    },
+  });
+
+  // Load conversations from the backend on mount
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      console.log("Token listo para cargar conversaciones:", accessToken);
+      getConversations()
+        .then(setConversations)
+        .catch((err) => console.error("[chat] failed to load conversations:", err));
+    }
+  }, [loading, isAuthenticated]);
+
+  // When the user selects a conversation, load its messages and switch to the chat tab
+  useEffect(() => {
+    if (!activeConversationId)
+      return;
+
+    getMessages(activeConversationId)
+      .then(setMessages)
+      .catch((err) => console.error("[chat] failed to load messages:", err));
+
+    setActiveTab("chat");
+  }, [activeConversationId]);
 
   // Automatically scroll to the latest message
   useEffect(() => {
@@ -25,12 +103,40 @@ export default function ChatModule() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    // Front-end validation as required by the subject 
-    if (!input.trim()) return;
-    // Placeholder for WebSocket emission logic 
-    const newMessage = { id: Date.now(), text: input, sender: "me" };
-    setMessages([...messages, newMessage]);
+    if (!input.trim() || !activeConversationId) return;
+
+    // Stop typing indicator before sending
+    clearTimeout(typingTimerRef.current);
+    socketRef.current?.emit("typingStop", { conversationId: String(activeConversationId) });
+
+    socketRef.current?.emit("sendMessage", {
+      conversationId: String(activeConversationId),
+      content: input.trim(),
+    });
+
     setInput("");
+  };
+
+  // Called on every keystroke in the message input.
+  // Emits typingStart once per "typing session", then schedules typingStop
+  // after 2 seconds of inactivity (debounce) to avoid spamming the server.
+  const handleTyping = (e) => {
+    setInput(e.target.value);
+    if (!activeConversationId) return;
+
+    const convId = String(activeConversationId);
+
+    // Emit typingStart only on the first keystroke (timer is not running yet)
+    if (!typingTimerRef.current) {
+      socketRef.current?.emit("typingStart", { conversationId: convId });
+    }
+
+    // Reset the inactivity timer on every keystroke
+    clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      socketRef.current?.emit("typingStop", { conversationId: convId });
+      typingTimerRef.current = null;
+    }, 2000);
   };
 
   return (
@@ -73,12 +179,19 @@ export default function ChatModule() {
               </div>
               {messages.map((msg) => (
                 <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-left-2">
-                  <span className="text-[8px] text-cyan-500/60 mb-1 font-bold">USER_ID_0x7F:</span>
+                  <span className="text-[8px] text-cyan-500/60 mb-1 font-bold">USER_{msg.senderId}:</span>
                   <div className="text-xs text-cyan-50 bg-cyan-950/40 p-2 rounded-r-md rounded-bl-md border-l-2 border-cyan-500/50 max-w-[90%]">
-                    {msg.text}
+                    {msg.content}
                   </div>
                 </div>
               ))}
+
+              {/* Typing indicator — only shown when someone else is typing */}
+              {typingUsers.size > 0 && (
+                <div className="text-[9px] text-cyan-400/60 italic animate-pulse">
+                  {[...typingUsers].map((id) => `USER_${id}`).join(", ")} typing...
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div 
@@ -102,20 +215,32 @@ export default function ChatModule() {
                 </div>
               </div>
               
-              {/* Friends List - Requirement IV.3  */}
+              {/* Conversations List */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                {MOCK_FRIENDS.map((friend) => (
-                  <div key={friend.id} className="flex items-center justify-between p-2 border border-cyan-500/10 bg-cyan-950/20 rounded group hover:border-cyan-500/30 transition-all">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${friend.status === 'online' ? 'bg-green-400 shadow-[0_0_5px_#4ade80]' : 'bg-gray-600'}`} />
-                      <span className="text-[11px] text-cyan-50">{friend.name}</span>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button title="Profile" className="text-cyan-400 hover:text-cyan-200"><User size={14} /></button>
-                      <button title="Add Friend" className="text-cyan-400 hover:text-cyan-200"><UserPlus size={14} /></button>
-                    </div>
+                {conversations.length === 0 ? (
+                  <div className="text-[10px] text-cyan-100/30 uppercase tracking-[0.2em] text-center mt-8">
+                    No conversations yet
                   </div>
-                ))}
+                ) : (
+                  conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => setActiveConversationId(conv.id)}
+                      className={`flex items-center justify-between p-2 border rounded group cursor-pointer transition-all
+                        ${activeConversationId === conv.id
+                          ? 'border-cyan-500/60 bg-cyan-950/40'
+                          : 'border-cyan-500/10 bg-cyan-950/20 hover:border-cyan-500/30'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {/* Presence dot — green if any participant is online */}
+                        <div className={`w-1.5 h-1.5 rounded-full ${onlineUsers.size > 0 ? 'bg-green-400' : 'bg-gray-600'}`} />
+                        <span className="text-[11px] text-cyan-50">
+                          {conv.name ?? (conv.type === 'private' ? 'DM' : 'Channel')}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </motion.div>
           )}
@@ -132,7 +257,7 @@ export default function ChatModule() {
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleTyping}
               className="w-full bg-voidBlack border border-cyan-900/50 rounded-lg p-3 pr-12 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none transition-all"
               placeholder="TYPE_MESSAGE..."
             />

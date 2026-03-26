@@ -16,7 +16,7 @@ router.post("/register", async (req, res) => {
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
 
     const result = await pool.query(
-      `INSERT INTO users (email, username, password)
+      `INSERT INTO auth.users (email, username, password)
        VALUES ($1, $2, $3)
        RETURNING id`,
       [email, username, hashed]
@@ -51,7 +51,7 @@ router.post("/login", async (req, res) => {
   try {
 
     const result = await pool.query(
-      `SELECT * FROM users WHERE email = $1`,
+      `SELECT * FROM auth.users WHERE email = $1`,
       [email]
     );
 
@@ -79,13 +79,39 @@ router.post("/login", async (req, res) => {
 });
 
 
+// SEARCH USERS by username (partial, case-insensitive)
+// Query param: ?q=searchTerm
+// Returns: [{ id, username }]
+router.get("/search", async (req, res) => {
+  const { q } = req.query;
+
+  if (!q || typeof q !== "string" || q.trim() === "") {
+    return res.status(400).json({ error: "Missing search query" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, username FROM auth.users
+       WHERE username ILIKE $1
+       ORDER BY username
+       LIMIT 20`,
+      [`%${q.trim()}%`]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 // GET USER
 router.get("/:id", async (req, res) => {
 
   try {
 
     const result = await pool.query(
-      `SELECT id, email, username, wins, matches, score, rank FROM users WHERE id = $1`,
+      `SELECT id, email, username, wins, matches, score, rank FROM auth.users WHERE id = $1`,
       [req.params.id]
     );
 

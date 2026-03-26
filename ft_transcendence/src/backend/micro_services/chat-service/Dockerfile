@@ -1,22 +1,17 @@
-
-#Stage 1: Build --> compiles TS in JS, we get all the raw materials and cook the meal
+# Stage 1: Build
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package*.json tsconfig*.json ./
 RUN npm ci
 
-COPY tsconfig.json ./
 COPY src/ ./src/
 
-RUN npm run build 
+RUN npm run build
 
-
-# ---
-#Stage 2: we serve the meal without the disposables (ingredients to cook the meal) so the image is lighter
-
-FROM node:20-alpine
+# Stage 2: Final
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -24,7 +19,5 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
-
-EXPOSE 3003
 
 CMD ["node", "dist/index.js"]
