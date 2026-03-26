@@ -1,5 +1,3 @@
-import { apiFetch } from "./client";
-
 const BASE_URL = window.location.origin + "/api";
 
 // REGISTER (sin token)
@@ -43,6 +41,8 @@ export async function refresh() {
 
 // LOGOUT (sin token)
 export async function logout() {
-  return apiFetch("/auth/logout", { method: "POST" });
+  return fetch(`${BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include"
+  });
 }
-
