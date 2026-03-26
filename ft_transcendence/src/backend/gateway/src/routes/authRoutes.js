@@ -10,8 +10,10 @@ import {
 import fetch from "node-fetch";
 import { v4 as uuidv4 } from "uuid";
 
+// Service URLs from environment variables
 const USERS_SERVICE = process.env.USERS_SERVICE || "http://users:3002";
 const CHAT_SERVICE = process.env.CHAT_SERVICE || "http://chat:3003";
+
 const router = express.Router();
 
 // LOGIN
@@ -32,30 +34,28 @@ router.post("/login", async (req, res) => {
     if (!response.ok)
       return res.status(response.status).json(data);
 
+    // Check for existing session before creating a new one (to handle force-logout)
     const oldSession = await findSessionByUser(data.id);
 
-    // Generar session_id único por login
+    // Generate unique session_id per login
     const sessionId = uuidv4();
 
-    // generar tokens
+    // Generate tokens
     const { token: refreshToken, expMs: refreshExp } = generateRefreshToken(data.id, data.username, sessionId);
     const { token: accessToken, expMs: accessExp } = generateAccessToken(data.id, sessionId);
 
-    // almacenar sesión
+    // Store session in DB/Memory
     await storeSession(data.id, {
       session_id: sessionId,
       refresh_expires_at: refreshExp,
       last_access_expires_at: accessExp
     });
 
-    
-    // Emitir logout al socket anterior si existe
+    // Emit logout to the previous socket if a session already existed
     if (oldSession && oldSession.session_id !== sessionId) {
       const resp = await fetch(`${CHAT_SERVICE}/force-logout`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: data.id })
       });
 
@@ -64,6 +64,8 @@ router.post("/login", async (req, res) => {
       }
     }
 
+    // Set Refresh Token Cookie
+    // Note: sameSite: "none" is usually required if frontend and backend are on different ports/domains with HTTPS
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
@@ -82,7 +84,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// REGISTER sigue igual
+// REGISTER
 router.post("/register", async (req, res) => {
   const { email, username, password } = req.body;
 
@@ -113,7 +115,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// REFRESH
+// REFRESH TOKEN
 router.post("/refresh", async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) return res.status(401).json({ error: "Missing tokens" });
@@ -130,13 +132,13 @@ router.post("/refresh", async (req, res) => {
     if (!session)
       return res.status(401).json({ error: "No active session" });
 
-    // verificar que la sesión coincide con la de la base de datos
+    // Verify that the token session matches the one in the database
     if (refreshPayload.session_id !== session.session_id)
       return res.status(401).json({ error: "Session replaced" });
 
     const { token: newAccess, expMs: newAccessExp } = generateAccessToken(refreshPayload.id, session.session_id);
 
-    // actualizar solo last_access_expires_at
+    // Update only last_access_expires_at
     await storeSession(refreshPayload.id, {
       session_id: session.session_id,
       refresh_expires_at: session.refresh_expires_at,

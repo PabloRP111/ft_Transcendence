@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useSocket } from "../context/SocketContext";
 
+/**
+ * useChat — Manages conversation-specific logic over the global socket.
+ * * Features:
+ * - Automatically joins/leaves rooms when activeConversationId changes.
+ * - Uses refs to prevent stale closures in event listeners.
+ * - Handles reconnections automatically.
+ */
 export function useChat(
   activeConversationId,
   {
@@ -10,24 +17,24 @@ export function useChat(
     onTypingStop,
     onUserOnline,
     onUserOffline,
-    
   } = {}
 ) {
   const socketRef = useSocket();
 
-  // 1. Sincronizar refs (se puede hacer directamente en el cuerpo para estar siempre al día)
+  // 1. Sync refs to keep callbacks fresh without re-triggering useEffect
   const refs = useRef({});
   refs.current = { 
     onNewMessage, onMessageFailed, onTypingStart, 
     onTypingStop, onUserOnline, onUserOffline 
   };
 
-  // 2. Registrar listeners de eventos de datos
+  // 2. Register Global Chat Listeners
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    const register = () => {
+    const registerListeners = () => {
+      // Event listeners use the ref to always call the latest function version
       socket.on("newMessage", (msg) => refs.current.onNewMessage?.(msg));
       socket.on("messageFailed", (err) => refs.current.onMessageFailed?.(err));
       socket.on("typingStart", (data) => refs.current.onTypingStart?.(data));
@@ -36,11 +43,12 @@ export function useChat(
       socket.on("userOffline", (data) => refs.current.onUserOffline?.(data));
     };
 
-    if (socket.connected) register();
-    socket.on("connect", register); // Importante: registrar para reconexiones
+    // If already connected, register immediately; otherwise wait for connect event
+    if (socket.connected) registerListeners();
+    socket.on("connect", registerListeners);
 
     return () => {
-      socket.off("connect", register);
+      socket.off("connect", registerListeners);
       socket.off("newMessage");
       socket.off("messageFailed");
       socket.off("typingStart");
@@ -50,23 +58,28 @@ export function useChat(
     };
   }, [socketRef]);
 
-  // 3. Join/Leave de la sala (Corregido error de sintaxis)
+  // 3. Handle Room Management (Join/Leave)
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket || !activeConversationId) return;
 
-    const join = () => {
+    const joinRoom = () => {
       socket.emit("joinConversation", { conversationId: String(activeConversationId) }, (res) => {
-        if (res?.ok) console.log("[socket] joined room:", activeConversationId);
-        else console.error("[socket] failed to join room:", res?.error);
+        if (res?.ok) {
+          console.log(`[socket] room sync: ${activeConversationId}`);
+        } else {
+          console.error("[socket] join error:", res?.error);
+        }
       });
     };
 
-    if (socket.connected) join();
-    socket.on("connect", join);
+    if (socket.connected) joinRoom();
+    socket.on("connect", joinRoom);
 
     return () => {
-      socket.off("connect", join);
+      socket.off("connect", joinRoom);
+      // We don't explicitly emit 'leaveConversation' here because the server 
+      // manages room membership, and switching rooms is handled by the next 'join'.
     };
   }, [activeConversationId, socketRef]);
 

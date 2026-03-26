@@ -5,7 +5,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 const router = express.Router();
 const USERS_SERVICE = process.env.USERS_SERVICE || "http://users:3002";
 
-// Search users by username — proxies to users-service GET /search?q=
+// SEARCH: Proxies request to users-service to find users by username
 router.get("/users/search", async (req, res) => {
   try {
     const q = req.query.q || "";
@@ -23,10 +23,11 @@ router.get("/users/search", async (req, res) => {
   }
 });
 
+// GET PROFILE: Fetch the authenticated user's data
 router.get("/me", authMiddleware, async (req, res) => {
   try {
     if (!req.user)
-    return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Unauthorized" });
 
     const response = await fetch(`${USERS_SERVICE}/${req.user.id}`);
     const data = await response.json().catch(() => ({}));
@@ -44,8 +45,12 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
+// UPDATE PROFILE: Update the authenticated user's information
 router.put("/me", authMiddleware, async (req, res) => {
   try {
+    if (!req.user)
+      return res.status(401).json({ error: "Unauthorized" });
+
     const response = await fetch(`${USERS_SERVICE}/${req.user.id}`, {
       method: "PUT",
       headers: {

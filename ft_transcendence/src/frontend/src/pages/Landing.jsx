@@ -1,5 +1,5 @@
-import { motion } from "framer-motion"; //animations
-import { Cpu } from "lucide-react"; //icons
+import { motion } from "framer-motion";
+import { Cpu } from "lucide-react";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
@@ -30,25 +30,31 @@ const itemVariants = {
 };
 
 export default function GridLanding() {
-	const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
-return (
+  return (
     <div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
+      
+      {/* ── BACKGROUND LAYER ── */}
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
         <LightCycles />
         <div className="scanline-overlay" />
       </div>
+
       <Navbar />
 
+      {/* ── CHAT SIDEBAR (Only for Authenticated Users) ── */}
       {!loading && isAuthenticated && (
-          <aside className="hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center w-96">
+        <aside className="hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
           <div className="w-full h-[70vh] max-h-[600px]"> 
             <ChatModule />
           </div>
         </aside>
       )}
+
+      {/* ── MAIN ARENA CONTENT ── */}
       <motion.main
         className="relative z-20 flex flex-col flex-1 min-h-[calc(100vh-176px)] items-center justify-start px-4 pt-16 sm:px-6 lg:px-8"
         variants={containerVariants}
@@ -57,7 +63,7 @@ return (
       >
         <motion.section
           variants={itemVariants}
-          className="neon-panel w-full max-w-3xl p-8 sm:p-10 text-center flex flex-col items-center gap-4"
+          className="neon-panel w-full max-w-3xl p-8 sm:p-10 text-center flex flex-col items-center gap-4 bg-black/20 backdrop-blur-sm"
         >
           <motion.h1
             variants={itemVariants}
@@ -72,14 +78,14 @@ return (
           >
             <button
               onClick={() => window.location.href = "/online-game"}
-              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center"
+              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center transition-all"
             >
               ONLINE GAME
             </button>
 
             <button
               onClick={() => window.location.href = "/ai-game"}
-              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center"
+              className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center transition-all"
             >
               PLAY VS AI
             </button>
@@ -87,15 +93,16 @@ return (
 
           <motion.div
             variants={itemVariants}
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/45 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-cyan-100/85"
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/45 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-cyan-100/85 bg-cyan-950/20"
           >
             <Cpu size={14} />
             Arena Core Online
           </motion.div>
         </motion.section>
 
+        {/* Decorative Title */}
         <motion.h1
-          className="landing-tron-title mt-10 sm:mt-28"
+          className="landing-tron-title mt-10 sm:mt-28 select-none"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, delay: 0.2 }}
@@ -103,6 +110,7 @@ return (
           TRON GAME
         </motion.h1>
       </motion.main>
+
       <Footer />
     </div>
   );

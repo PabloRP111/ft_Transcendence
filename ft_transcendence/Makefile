@@ -4,39 +4,40 @@ COMPOSE=$(DOCKER_BIN) -f ./src/docker-compose.yml
 all: up
 
 build:
-	@echo "🔨 Construyendo imágenes..."
+	@echo "🔨 Building images..."
 	@$(COMPOSE) build
 
 up:
-	@echo "🚀 Levantando contenedores..."
+	@echo "🚀 Starting containers..."
 	@$(COMPOSE) up --build -d
 
 up-no-build:
-	@echo "🚀 Levantando contenedores sin rebuild..."
+	@echo "🚀 Starting containers without rebuild..."
 	@$(COMPOSE) up -d
+
 down:
-	@echo "🛑 Parando contenedores..."
+	@echo "🛑 Stopping containers..."
 	@$(COMPOSE) down
 
 reload: down up
-	@echo "Recargando containers"
+	@echo "♻️ Reloading containers..."
 
 fclean: down
-	@echo "🧨 Borrando volúmenes del proyecto..."
+	@echo "🧨 Removing project volumes..."
 	@$(COMPOSE) down -v --rmi all --remove-orphans
 	@docker volume ls -q | xargs -r docker volume rm -f
-	@echo "🧹 Borrando imágenes del proyecto..."
+	@echo "🧹 Removing project images..."
 	@$(DOCKER_BIN) -f ./src/docker-compose.yml build --no-cache
 	@docker images -q | xargs -r docker rmi -f
-	@echo "🗑 Borrando cookies"
+	@echo "🗑 Clearing cookies..."
 	@rm -f ./src/backend/gateway/src/cookies.txt
-	@echo "✅ Limpieza completa"
+	@echo "✅ Cleanup complete"
 
 logs:
 	$(COMPOSE) logs -f
 
 status:
-	@echo "STATUS"
+	@echo "--- SYSTEM STATUS ---"
 	@echo "Containers:"
 	@docker ps -a
 	@echo "Images:"
