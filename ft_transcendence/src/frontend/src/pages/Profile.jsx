@@ -5,6 +5,8 @@ import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser } from "../api/users";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import userimage from "../assets/userimage.png";
 
 export default function ProfilePage() {
   const { loading, isAuthenticated } = useAuth();
@@ -82,7 +84,11 @@ export default function ProfilePage() {
 
           <div className="mb-6 flex justify-center">
             <div className="flex h-24 w-24 items-center justify-center rounded-full border-[color:var(--tron-border)]">
-              <UserRound size={48} />
+              <img
+                src={userimage}
+                alt="userimage"
+                className="h-24 w-24 rounded-full object-cover"
+              />
             </div>
           </div>
 

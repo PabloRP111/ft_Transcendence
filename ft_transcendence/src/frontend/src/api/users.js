@@ -8,3 +8,21 @@ export function getCurrentUser() {
 export function searchUsers(q) {
   return apiFetch(`/users/search?q=${encodeURIComponent(q)}`);
 }
+
+export async function editUser(accessToken, userData) {
+  const res = await fetch(`${BASE_URL}/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(userData),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text);
+  }
+
+  return res.json();
+}

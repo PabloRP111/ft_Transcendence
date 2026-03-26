@@ -1,2 +1,5 @@
- Nginx redirije a gateway, no se llama al container de gateway, llamada al endpoint de user container directamente.
- Hacer que cuando se te desconecte te loges en otro dispositivo te actualize la interfaz en el primer dispositivo y salga como deslogeado
+edicion de perfil
+
+que el perfil muestre foto de usuario
+
+hacer que no se pueda editar un perfil que no sea el tuyo
