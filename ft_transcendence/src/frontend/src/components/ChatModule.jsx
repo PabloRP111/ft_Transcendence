@@ -1,15 +1,10 @@
-<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, MessageSquare, Users, UserPlus, User, Search } from "lucide-react";
 import { getConversations, getMessages } from "../api/chat";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
-import { getMyIdFromToken, getLastOpened, saveLastOpened } from "../utils/chatStorage";
-import InboxView from "./chat/InboxView";
-import ChatView from "./chat/ChatView";
-import SearchView from "./chat/SearchView";
-import CreateChannelView from "./chat/CreateChannelView";
+
 
 /*
  * ChatModule — top-level coordinator for the chat panel
