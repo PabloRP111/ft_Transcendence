@@ -43,13 +43,12 @@ return (
       <Navbar />
 
       {!loading && isAuthenticated && (
-        <aside className="fixed left-0 top-24 bottom-12 z-40 flex items-center justify-center w-80 px-4">
-          <div className="w-full h-[60vh] max-h-[550px]">
+          <aside className="hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center w-96">
+          <div className="w-full h-[70vh] max-h-[600px]"> 
             <ChatModule />
           </div>
         </aside>
       )}
-
       <motion.main
         className="relative z-20 flex flex-col flex-1 min-h-[calc(100vh-176px)] items-center justify-start px-4 pt-16 sm:px-6 lg:px-8"
         variants={containerVariants}

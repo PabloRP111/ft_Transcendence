@@ -53,32 +53,26 @@ export default function EditProfilePage() {
     try {
       if (accessToken) {
         const currentUser = await editUser(accessToken, form);
-        if (currentUser && currentUser.username) {
+
+        if (currentUser) {
           setForm({
-            username: currentUser.username || "",
-            email: currentUser.email || "",
+            username: currentUser.username || form.username,
+            email: currentUser.email || form.email,
             password: "",
           });
-          localStorage.setItem("username", currentUser.username);
-          return;
+
+          if (currentUser.username) {
+            localStorage.setItem("username", currentUser.username);
+          }
+
+          navigate("/profile"); 
         }
       }
-
-      const storedUser = localStorage.getItem("username");
-      if (storedUser) {
-        setForm((prev) => ({ ...prev, username: storedUser }));
-      }
     } catch (err) {
-      console.error("Failed to fetch current user profile:", err);
-      const storedUser = localStorage.getItem("username");
-      if (storedUser) {
-        setForm((prev) => ({ ...prev, username: storedUser }));
-      }
+      console.error("Failed to update user profile:", err);
     }
   };
   
-
-
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
