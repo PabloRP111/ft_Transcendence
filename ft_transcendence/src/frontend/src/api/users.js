@@ -10,7 +10,7 @@ export function searchUsers(q) {
 }
 
 export async function editUser(accessToken, userData) {
-  const res = await fetch(`${BASE_URL}/me`, {
+  const res = await fetch(`/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

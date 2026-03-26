@@ -12,6 +12,7 @@ import AIGame from "./pages/AI-Game.jsx";
 import Credits from "./pages/Credits.jsx";
 import Terms from "./pages/Terms.jsx";
 import Privacy from "./pages/Privacy.jsx";
+import Edit from "./pages/Edit.jsx";
 
 import useTronTheme from "./hooks/useTronTheme";
 
@@ -31,6 +32,7 @@ function RouterContent() {
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
         <Route path="/online-game" element={<OnlineGame />} />
+        <Route path="/edit" element={<Edit />} />
       </Route>
     </Routes>
   );

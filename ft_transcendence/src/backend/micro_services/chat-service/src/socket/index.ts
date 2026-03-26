@@ -100,7 +100,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
   const chat = io.of('/chat');
   chatNamespace = chat;
 
-  // 🔐 AUTH MIDDLEWARE
+  // AUTH MIDDLEWARE
   chat.use((
     socket: Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketData>,
     next: (err?: Error) => void
@@ -135,7 +135,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
     }
   });
 
-  // 🔌 CONNECTION
+  // CONNECTION
   chat.on('connection', async (
     socket: Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketData>
   ) => {
@@ -177,7 +177,6 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
     }
 
     /* ───── Events ───── */
-
     socket.on('joinConversation', async (payload, ack) => {
       const { conversationId } = payload;
 

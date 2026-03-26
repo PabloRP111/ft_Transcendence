@@ -165,7 +165,7 @@ router.put("/:id", async (req, res) => {
     values.push(req.params.id);
 
     const result = await pool.query(
-      `UPDATE users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
+      `UPDATE auth.users SET ${fields.join(", ")} WHERE id = $${idx} RETURNING *`,
       values
     );
 

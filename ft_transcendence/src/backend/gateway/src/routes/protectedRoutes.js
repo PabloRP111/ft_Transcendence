@@ -44,7 +44,7 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
-router.put("/me", async (req, res) => {
+router.put("/me", authMiddleware, async (req, res) => {
   try {
     const response = await fetch(`${USERS_SERVICE}/${req.user.id}`, {
       method: "PUT",
@@ -68,6 +68,4 @@ router.put("/me", async (req, res) => {
   }
 });
 
-
 export default router;
-

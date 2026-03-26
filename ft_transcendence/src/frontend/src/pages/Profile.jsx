@@ -5,7 +5,6 @@ import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser } from "../api/users";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import userimage from "../assets/userimage.png";
 
 export default function ProfilePage() {
@@ -78,7 +77,10 @@ export default function ProfilePage() {
       <motion.main className="relative z-20 flex items-center justify-center px-6 py-16">
         <motion.section className="neon-panel w-full max-w-3xl p-10 text-center">
           
-          <button className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border-[color:var(--tron-border)] text-cyan-100 hover:bg-cyan-300/10">
+          <button
+            onClick={() => window.location.href = "/edit"}
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border-[color:var(--tron-border)] text-cyan-100 hover:bg-cyan-300/10"      
+          >
             <Pencil size={16} />
           </button>
 
