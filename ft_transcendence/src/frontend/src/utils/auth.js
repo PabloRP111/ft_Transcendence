@@ -10,7 +10,7 @@ export function removeStoredToken() {
   localStorage.removeItem("accessToken");
 }
 
-// Decodificar payload sin verificar firma (solo frontend)
+// Decode payload without verifying signature (frontend only)
 export function decodeToken(token) {
   try {
     const payload = token.split(".")[1];
