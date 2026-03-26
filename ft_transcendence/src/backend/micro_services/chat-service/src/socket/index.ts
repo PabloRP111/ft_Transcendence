@@ -156,7 +156,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
 
     presence.get(userId)!.add(socket.id);
 
-    try {
+		try {
       const conversationIds = await getUserConversationIds(userId);
 
       // Join every room the user belongs to
@@ -165,15 +165,15 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       }
       console.log(`[socket] user ${userId} auto-joined ${conversationIds.length} room(s)`);
 
-      // Presence broadcast (only on first connection, not on additional tabs)
+      // Presence broadcast
       if (wasOffline) {
         for (const convId of conversationIds) {
           console.log(`[socket] emitting userOnline for user ${userId} in conversation ${convId}`);
           chat.to(convId).emit('userOnline', { userId });
         }
-      } catch (err) {
-        console.error('userOnline error:', err);
       }
+    } catch (err) {
+      console.error('userOnline error:', err);
     }
 
     /* ───── Events ───── */
