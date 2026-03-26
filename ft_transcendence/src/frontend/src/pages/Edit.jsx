@@ -49,16 +49,15 @@ export default function EditProfilePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Saving profile:", form);
-    // Aquí iría la llamada a tu API
 
     try {
       if (accessToken) {
         const currentUser = await editUser(accessToken, form);
         if (currentUser && currentUser.username) {
           setForm({
-            username: currentUser.username,
-            email: currentUser.email,
-            password: currentUser.password,
+            username: currentUser.username || "",
+            email: currentUser.email || "",
+            password: "",
           });
           localStorage.setItem("username", currentUser.username);
           return;

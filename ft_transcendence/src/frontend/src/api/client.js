@@ -3,7 +3,7 @@ import { getStoredToken} from "../utils/auth";
 export async function apiFetch(endpoint, options = {}) {
   const token = getStoredToken();
 
-  const res = await fetch(`${window.location.origin}/api/${endpoint}`, {
+  const res = await fetch(`${window.location.origin}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

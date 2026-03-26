@@ -1,7 +1,7 @@
 import { apiFetch } from "./client";
 
 export function getCurrentUser() {
-  return apiFetch("/me");
+  return apiFetch("/api/me");
 }
 
 // Search users by username (partial, case-insensitive)
@@ -10,7 +10,7 @@ export function searchUsers(q) {
 }
 
 export async function editUser(accessToken, userData) {
-  const res = await fetch(`/me`, {
+  const res = await fetch(`api/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
