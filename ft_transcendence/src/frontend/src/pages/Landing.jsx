@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Cpu } from "lucide-react";
+import { Cpu, Trophy } from "lucide-react";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
@@ -50,6 +50,42 @@ export default function GridLanding() {
         <aside className="hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
           <div className="w-full h-[70vh] max-h-[600px]"> 
             <ChatModule />
+          </div>
+        </aside>
+      )}
+
+      {/* ── RANKING SIDEBAR ── */}
+      {!loading && isAuthenticated && (
+        <aside className="hidden lg:flex fixed right-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
+          <div className="w-full h-[70vh] max-h-[600px] neon-panel bg-black/20 backdrop-blur-sm p-4 flex flex-col">
+            <Trophy className="mx-auto mb-4" size={32} />
+            <h2 className="text-center text-cyan-300 uppercase tracking-widest mb-4">
+              Top Players
+            </h2>
+
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {/* MOCK DATA (luego conectas API) */}
+              {[
+                { name: "User_01", score: 1200 },
+                { name: "NeoGrid", score: 1100 },
+                { name: "LightMaster", score: 980 },
+                { name: "CycleX", score: 870 },
+                { name: "BitCrusher", score: 820 },
+              ].map((player, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center px-3 py-2 rounded-md border border-cyan-500/20 bg-black/30"
+                >
+                  <span className="text-cyan-100 text-sm">
+                    #{index + 1} {player.name}
+                  </span>
+                  <span className="text-cyan-400 text-sm">
+                    {player.score}
+                  </span>
+                </div>
+              ))}
+            </div>
+
           </div>
         </aside>
       )}
