@@ -175,7 +175,7 @@ export default function ChatModule() {
           searchUsers(q).catch(() => []),
           searchChannels(q).catch(() => []),
         ]);
-        setSearchResults({ users, channels });
+        setSearchResults({ users: users.filter(u => String(u.id) !== String(myId)), channels });
       } finally {
         setSearchLoading(false);
       }
