@@ -2,16 +2,17 @@ import { Fragment } from "react";
 import { motion } from "framer-motion";
 import { Search, Plus } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
+import { usePresence } from "../../context/PresenceContext";
 
 export default function InboxView({
   conversations,
   activeConversationId,
   unreadIds,
-  searchTerm,
-  setSearchTerm,
   onOpenConversation,
   onNavigate,
 }) {
+  const onlineUsers = usePresence();
+
   const sorted = [...conversations].sort((a, b) => {
     const aIsArena = a.name?.toLowerCase() === "arena_general";
     const bIsArena = b.name?.toLowerCase() === "arena_general";
@@ -21,6 +22,12 @@ export default function InboxView({
     const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
     return bTime - aTime;
   });
+
+  // For a DM, check if the other participant is online
+  const isDMOnline = (conv) => {
+    if (conv.type !== "private") return false;
+    return conv.participants?.some((p) => onlineUsers.has(String(p.id)));
+  };
 
   return (
     <motion.div
@@ -50,10 +57,9 @@ export default function InboxView({
           <input
             type="text"
             placeholder="Search entities..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => onNavigate("search")}
-            className="w-full bg-voidBlack/50 border border-cyan-500/20 rounded-md py-1.5 pl-7 pr-3 text-[10px] text-cyan-50 focus:outline-none focus:border-cyan-400/50"
+            readOnly
+            className="w-full bg-voidBlack/50 border border-cyan-500/20 rounded-md py-1.5 pl-7 pr-3 text-[10px] text-cyan-50 focus:outline-none focus:border-cyan-400/50 cursor-pointer"
           />
         </div>
       </div>
@@ -63,6 +69,15 @@ export default function InboxView({
         {sorted.map((conv, idx) => {
           const isArena = conv.name?.toLowerCase() === "arena_general";
           const hasUnread = unreadIds.has(conv.id) || unreadIds.has(String(conv.id));
+          const isOnline = isDMOnline(conv);
+
+          // Dot priority: unread (orange) > online (green) > default (gray)
+          const dotClass = hasUnread
+            ? "bg-orange-400 shadow-[0_0_4px_rgba(251,146,60,0.8)]"
+            : isOnline
+            ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]"
+            : "bg-gray-600";
+
           return (
             <Fragment key={conv.id}>
               <div
@@ -72,11 +87,7 @@ export default function InboxView({
                     ? "border-cyan-500/60 bg-cyan-950/40"
                     : "border-cyan-500/10 bg-cyan-950/20 hover:border-cyan-500/30"}`}
               >
-                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  hasUnread
-                    ? "bg-orange-400 shadow-[0_0_4px_rgba(251,146,60,0.8)]"
-                    : "bg-gray-600"
-                }`} />
+                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotClass}`} />
                 <span className="text-[11px] text-cyan-50 font-mono truncate">
                   {convDisplayName(conv)}
                 </span>

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { SocketProvider } from "./context/SocketContext";
+import { PresenceProvider } from "./context/PresenceContext";
 
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
@@ -40,9 +41,11 @@ export default function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <BrowserRouter>
-          <RouterContent />
-        </BrowserRouter>
+        <PresenceProvider>
+          <BrowserRouter>
+            <RouterContent />
+          </BrowserRouter>
+        </PresenceProvider>
       </SocketProvider>
     </AuthProvider>
   );

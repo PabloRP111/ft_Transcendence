@@ -31,8 +31,8 @@ export default function ChatModule() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
 
-  // ── Presence, Typing & Unreads ────────────────────────────────────────────
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  // ── Typing & Unreads ─────────────────────────────────────────────────────
+  // Presence (online/offline) is managed globally by PresenceContext
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [unreadIds, setUnreadIds] = useState(new Set());
 
@@ -67,12 +67,6 @@ export default function ChatModule() {
     },
     onTypingStart: ({ userId }) => setTypingUsers((prev) => new Set(prev).add(userId)),
     onTypingStop: ({ userId }) => setTypingUsers((prev) => {
-      const next = new Set(prev);
-      next.delete(userId);
-      return next;
-    }),
-    onUserOnline: ({ userId }) => setOnlineUsers((prev) => new Set(prev).add(userId)),
-    onUserOffline: ({ userId }) => setOnlineUsers((prev) => {
       const next = new Set(prev);
       next.delete(userId);
       return next;
@@ -199,7 +193,6 @@ export default function ChatModule() {
             unreadIds={unreadIds}
             onOpenConversation={openConversation}
             onNavigate={setView}
-            onlineUsers={onlineUsers}
           />
         )}
 

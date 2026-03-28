@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { Send, ArrowLeft } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
+import { usePresence } from "../../context/PresenceContext";
 
 export default function ChatView({
   activeConversation,
@@ -14,6 +15,12 @@ export default function ChatView({
   onBack,
 }) {
   const scrollRef = useRef(null);
+  const onlineUsers = usePresence();
+
+  const isDM = activeConversation?.type === "private";
+  const isOtherOnline = isDM && activeConversation?.participants?.some(
+    (p) => onlineUsers.has(String(p.id))
+  );
 
   return (
     <motion.div
@@ -31,9 +38,17 @@ export default function ChatView({
         >
           <ArrowLeft size={16} />
         </button>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 truncate">
-          {activeConversation ? convDisplayName(activeConversation) : "Chat"}
-        </span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 truncate">
+            {activeConversation ? convDisplayName(activeConversation) : "Chat"}
+          </span>
+          {isDM && (
+            <span className={`text-[8px] font-mono flex items-center gap-1 ${isOtherOnline ? "text-green-400" : "text-cyan-100/30"}`}>
+              <span className={`w-1 h-1 rounded-full inline-block ${isOtherOnline ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" : "bg-gray-600"}`} />
+              {isOtherOnline ? "online" : "offline"}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Messages — flex-col-reverse so scroll starts at bottom without JS */}

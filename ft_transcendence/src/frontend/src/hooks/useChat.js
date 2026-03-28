@@ -19,7 +19,7 @@ export function useChat(
     onUserOffline,
   } = {}
 ) {
-  const socketRef = useSocket();
+  const { socketRef } = useSocket();
 
   // 1. Sync refs to keep callbacks fresh without re-triggering useEffect
   const refs = useRef({});
