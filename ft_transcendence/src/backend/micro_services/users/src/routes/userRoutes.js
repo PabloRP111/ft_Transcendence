@@ -161,6 +161,162 @@ router.get("/by-username/:username", async (req, res) => {
   }
 });
 
+// ── FRIENDS ───────────────────────────────────────────────────────────────────
+// All friends routes receive X-User-Id from the gateway (injected after JWT validation)
+// req.headers['x-user-id'] is the authenticated user making the request
+
+// GET /friends — list accepted friends with their stats
+router.get("/friends", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.wins, u.matches, u.score, u.rank
+       FROM auth.friendships f
+       JOIN auth.users u ON (
+         CASE WHEN f.user_id = $1 THEN f.friend_id ELSE f.user_id END = u.id
+       )
+       WHERE (f.user_id = $1 OR f.friend_id = $1)
+         AND f.status = 'accepted'`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET /friends/pending — incoming friend requests (others requested me)
+router.get("/friends/pending", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username, f.created_at
+       FROM auth.friendships f
+       JOIN auth.users u ON f.user_id = u.id
+       WHERE f.friend_id = $1 AND f.status = 'pending'
+       ORDER BY f.created_at DESC`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET /friends/status/:targetId — relationship status between me and another user
+router.get("/friends/status/:targetId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const targetId = parseInt(req.params.targetId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      `SELECT status, user_id FROM auth.friendships
+       WHERE (user_id = $1 AND friend_id = $2)
+          OR (user_id = $2 AND friend_id = $1)`,
+      [userId, targetId]
+    );
+    if (result.rows.length === 0) return res.json({ status: "none" });
+
+    const row = result.rows[0];
+    // If pending and I sent it → "pending_sent", if they sent it → "pending_received"
+    if (row.status === "pending")
+      return res.json({ status: row.user_id === userId ? "pending_sent" : "pending_received" });
+
+    res.json({ status: row.status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST /friends/request/:targetId — send a friend request
+router.post("/friends/request/:targetId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const targetId = parseInt(req.params.targetId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (userId === targetId) return res.status(400).json({ error: "Cannot add yourself" });
+
+  try {
+    await pool.query(
+      `INSERT INTO auth.friendships (user_id, friend_id, status)
+       VALUES ($1, $2, 'pending')
+       ON CONFLICT DO NOTHING`,
+      [userId, targetId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST /friends/accept/:requesterId — accept a pending request
+router.post("/friends/accept/:requesterId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const requesterId = parseInt(req.params.requesterId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      `UPDATE auth.friendships SET status = 'accepted'
+       WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
+      [requesterId, userId]
+    );
+    if (result.rowCount === 0)
+      return res.status(404).json({ error: "No pending request found" });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST /friends/decline/:requesterId — decline a pending request
+router.post("/friends/decline/:requesterId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const requesterId = parseInt(req.params.requesterId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    await pool.query(
+      `DELETE FROM auth.friendships
+       WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
+      [requesterId, userId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// DELETE /friends/:friendId — remove an accepted friend
+router.delete("/friends/:friendId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const friendId = parseInt(req.params.friendId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    await pool.query(
+      `DELETE FROM auth.friendships
+       WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
+         AND status = 'accepted'`,
+      [userId, friendId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 // GET USER BY ID
 router.get("/:id", async (req, res) => {
 

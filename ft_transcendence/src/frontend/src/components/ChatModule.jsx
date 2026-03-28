@@ -46,10 +46,11 @@ export default function ChatModule() {
   const [newChannelDesc, setNewChannelDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
+  const [pendingDmUserId, setPendingDmUserId] = useState(null);
+
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isInitializing = useRef(false);
-  const dmHandledRef = useRef(false);
 
   // ── WebSocket Logic ───────────────────────────────────────────────────────
   const socketRef = useChat(activeConversationId, {
@@ -109,25 +110,32 @@ export default function ChatModule() {
     initializeChat();
   }, [loading, isAuthenticated]);
 
-  // ── Handle ?dm=userId query param (e.g. from /profile/:id DM button) ──────
+  // ── Handle ?dm=userId — step 1: capture param and clear URL immediately ────
   useEffect(() => {
     const dmUserId = searchParams.get("dm");
-    if (!dmUserId || conversations.length === 0 || dmHandledRef.current) return;
+    if (!dmUserId) return;
+    setPendingDmUserId(dmUserId);
+    setSearchParams({}, { replace: true });
+  }, [searchParams]);
 
-    dmHandledRef.current = true;
+  // ── Handle ?dm=userId — step 2: open DM once conversations are loaded ──────
+  useEffect(() => {
+    if (!pendingDmUserId || conversations.length === 0) return;
+    const dmUserId = pendingDmUserId;
+    setPendingDmUserId(null);
+
     async function openDM() {
       try {
         const conv = await createConversation("private", [String(dmUserId)]);
         const convs = await getConversations();
         setConversations(convs);
         openConversation(conv.id);
-        setSearchParams({}, { replace: true });
       } catch (err) {
         console.error("[chat] failed to open DM from query param:", err);
       }
     }
     openDM();
-  }, [searchParams, conversations.length]);
+  }, [pendingDmUserId, conversations.length]);
 
   // ── Load History ──────────────────────────────────────────────────────────
   useEffect(() => {

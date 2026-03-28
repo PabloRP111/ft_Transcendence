@@ -103,4 +103,30 @@ router.put("/me", authMiddleware, async (req, res) => {
   }
 });
 
+// Helper: proxy friends endpoints injecting X-User-Id
+async function friendsProxy(req, res, path, method = "GET", body = null) {
+  try {
+    const opts = {
+      method,
+      headers: { "Content-Type": "application/json", "X-User-Id": String(req.user.id) },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const response = await fetch(`${USERS_SERVICE}${path}`, opts);
+    const data = await response.json().catch(() => ({}));
+    return res.status(response.status).json(data);
+  } catch (err) {
+    console.error(`[gateway] friends proxy error ${path}:`, err);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+}
+
+// FRIENDS ENDPOINTS
+router.get("/friends",                      authMiddleware, (req, res) => friendsProxy(req, res, "/friends"));
+router.get("/friends/pending",              authMiddleware, (req, res) => friendsProxy(req, res, "/friends/pending"));
+router.get("/friends/status/:targetId",     authMiddleware, (req, res) => friendsProxy(req, res, `/friends/status/${req.params.targetId}`));
+router.post("/friends/request/:targetId",   authMiddleware, (req, res) => friendsProxy(req, res, `/friends/request/${req.params.targetId}`, "POST"));
+router.post("/friends/accept/:requesterId", authMiddleware, (req, res) => friendsProxy(req, res, `/friends/accept/${req.params.requesterId}`, "POST"));
+router.post("/friends/decline/:requesterId",authMiddleware, (req, res) => friendsProxy(req, res, `/friends/decline/${req.params.requesterId}`, "POST"));
+router.delete("/friends/:friendId",         authMiddleware, (req, res) => friendsProxy(req, res, `/friends/${req.params.friendId}`, "DELETE"));
+
 export default router;

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { UserRound, Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare } from "lucide-react";
+import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getUserById, getUserByUsername } from "../api/users";
+import { getFriendStatus, sendFriendRequest, removeFriend } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
 import userimage from "../assets/userimage.png";
 
@@ -15,11 +16,12 @@ export default function UserProfile() {
 
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState("loading");
+  const [friendStatus, setFriendStatus] = useState("none"); // none | pending_sent | pending_received | accepted
+  const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
-    // Support both /profile/42 (numeric ID) and /profile/username
-    const fetch = /^\d+$/.test(id) ? getUserById(id) : getUserByUsername(id);
-    fetch
+    const fetchFn = /^\d+$/.test(id) ? getUserById(id) : getUserByUsername(id);
+    fetchFn
       .then((data) => {
         setProfile({
           id: data.id,
@@ -30,9 +32,37 @@ export default function UserProfile() {
           rank: Number(data.rank ?? 0),
         });
         setStatus("success");
+        return getFriendStatus(data.id);
       })
+      .then((rel) => setFriendStatus(rel.status))
       .catch(() => setStatus("error"));
   }, [id]);
+
+  const handleFriendAction = async () => {
+    if (!profile || friendLoading) return;
+    setFriendLoading(true);
+    try {
+      if (friendStatus === "none") {
+        await sendFriendRequest(profile.id);
+        setFriendStatus("pending_sent");
+      } else if (friendStatus === "accepted") {
+        await removeFriend(profile.id);
+        setFriendStatus("none");
+      }
+    } finally {
+      setFriendLoading(false);
+    }
+  };
+
+  const friendButton = () => {
+    if (friendStatus === "accepted")
+      return { icon: <UserMinus size={14} />, label: "Friends", style: "border-green-500/40 bg-green-500/10 text-green-300 hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-300" };
+    if (friendStatus === "pending_sent")
+      return { icon: <Clock size={14} />, label: "Pending", style: "border-yellow-500/40 bg-yellow-500/10 text-yellow-300 cursor-default" };
+    if (friendStatus === "pending_received")
+      return { icon: <UserCheck size={14} />, label: "Accept", style: "border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20" };
+    return { icon: <UserPlus size={14} />, label: "Add Friend", style: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20" };
+  };
 
   const isOnline = profile ? onlineUsers.has(String(profile.id)) : false;
 
@@ -98,6 +128,15 @@ export default function UserProfile() {
             >
               <MessageSquare size={14} /> DM
             </button>
+            {(() => { const btn = friendButton(); return (
+              <button
+                onClick={handleFriendAction}
+                disabled={friendLoading || friendStatus === "pending_sent"}
+                className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs uppercase tracking-widest transition-colors ${btn.style}`}
+              >
+                {btn.icon} {btn.label}
+              </button>
+            ); })()}
           </div>
 
           {/* Stats */}

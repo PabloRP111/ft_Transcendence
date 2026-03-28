@@ -60,10 +60,24 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
          WHERE LOWER(name) = $1 AND type = 'channel' LIMIT 1`,
         [normalizedName]
       );
-      
-      if (existingConv.rows.length > 0) {
-        conversation = existingConv.rows[0];
-      }
+      if (existingConv.rows.length > 0) conversation = existingConv.rows[0];
+    }
+
+    // For private DMs: find existing conversation between exactly these two users
+    if (type === 'private' && extraParticipants.length === 1) {
+      const otherId = parseInt(extraParticipants[0], 10);
+      const existingDM = await client.query<{
+        id: number; type: string; name: string | null; is_public: boolean; description: string | null; created_at: string;
+      }>(
+        `SELECT c.id, c.type, c.name, c.is_public, c.description, c.created_at
+         FROM chat.conversations c
+         JOIN chat.conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
+         JOIN chat.conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
+         WHERE c.type = 'private'
+         LIMIT 1`,
+        [creatorId, otherId]
+      );
+      if (existingDM.rows.length > 0) conversation = existingDM.rows[0];
     }
 
     // 2. If no existing conversation was found, create it
