@@ -9,20 +9,17 @@ export function searchUsers(q) {
   return apiFetch(`/users/search?q=${encodeURIComponent(q)}`);
 }
 
-export async function editUser(accessToken, userData) {
-  const res = await fetch(`${BASE_URL}/me`, {
+export function getUserById(id) {
+  return apiFetch(`/users/${id}`);
+}
+
+export function getUserByUsername(username) {
+  return apiFetch(`/users/by-username/${encodeURIComponent(username)}`);
+}
+
+export function editUser(_accessToken, userData) {
+  return apiFetch("/me", {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
     body: JSON.stringify(userData),
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text);
-  }
-
-  return res.json();
 }

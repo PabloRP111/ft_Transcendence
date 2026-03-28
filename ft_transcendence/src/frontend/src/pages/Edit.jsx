@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserRound, Save, ArrowLeft } from "lucide-react";
+import { Save, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import userimage from "../assets/userimage.png";
 import { useAuth } from "../context/AuthContext";
-import { editUser } from "../api/users";
+import { editUser, getCurrentUser } from "../api/users";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -35,11 +35,13 @@ export default function EditProfilePage() {
   const navigate = useNavigate();
   const { accessToken } = useAuth();
 
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((data) => setForm((prev) => ({ ...prev, username: data.username, email: data.email })))
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

@@ -7,6 +7,8 @@ import { PresenceProvider } from "./context/PresenceContext";
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
 import Profile from "./pages/Profile.jsx";
+import UserProfile from "./pages/UserProfile.jsx";
+import Edit from "./pages/Edit.jsx";
 import Landing from "./pages/Landing.jsx";
 import OnlineGame from "./pages/Online-Game.jsx";
 import AIGame from "./pages/AI-Game.jsx";
@@ -31,6 +33,8 @@ function RouterContent() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/:id" element={<UserProfile />} />
+        <Route path="/edit" element={<Edit />} />
         <Route path="/online-game" element={<OnlineGame />} />
       </Route>
     </Routes>

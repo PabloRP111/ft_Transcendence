@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 
 // API & Hooks
 import { getConversations, getMessages, createConversation, searchChannels, joinChannel } from "../api/chat";
@@ -17,10 +18,11 @@ import CreateChannelView from "./chat/CreateChannelView";
 /**
  * ChatModule — Top-level coordinator for the chat panel.
  * Manages the navigation stack, socket events, and shared state.
- */
+*/
 export default function ChatModule() {
   const { loading, isAuthenticated } = useAuth();
   const myId = getMyIdFromToken();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Navigation State ──────────────────────────────────────────────────────
   const [view, setView] = useState("inbox"); // inbox, chat, search, create
@@ -47,6 +49,7 @@ export default function ChatModule() {
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isInitializing = useRef(false);
+  const dmHandledRef = useRef(false);
 
   // ── WebSocket Logic ───────────────────────────────────────────────────────
   const socketRef = useChat(activeConversationId, {
@@ -105,6 +108,26 @@ export default function ChatModule() {
     }
     initializeChat();
   }, [loading, isAuthenticated]);
+
+  // ── Handle ?dm=userId query param (e.g. from /profile/:id DM button) ──────
+  useEffect(() => {
+    const dmUserId = searchParams.get("dm");
+    if (!dmUserId || conversations.length === 0 || dmHandledRef.current) return;
+
+    dmHandledRef.current = true;
+    async function openDM() {
+      try {
+        const conv = await createConversation("private", [String(dmUserId)]);
+        const convs = await getConversations();
+        setConversations(convs);
+        openConversation(conv.id);
+        setSearchParams({}, { replace: true });
+      } catch (err) {
+        console.error("[chat] failed to open DM from query param:", err);
+      }
+    }
+    openDM();
+  }, [searchParams, conversations.length]);
 
   // ── Load History ──────────────────────────────────────────────────────────
   useEffect(() => {

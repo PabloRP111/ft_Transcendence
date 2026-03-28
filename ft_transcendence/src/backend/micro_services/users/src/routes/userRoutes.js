@@ -105,7 +105,63 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// GET USER
+// UPDATE USER
+router.put("/:id", async (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username && !email && !password)
+    return res.status(400).json({ error: "Nothing to update" });
+
+  try {
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    if (username) { fields.push(`username = $${i++}`); values.push(username); }
+    if (email)    { fields.push(`email = $${i++}`);    values.push(email); }
+    if (password) {
+      const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+      fields.push(`password = $${i++}`);
+      values.push(hashed);
+    }
+
+    values.push(req.params.id);
+
+    const result = await pool.query(
+      `UPDATE auth.users SET ${fields.join(", ")} WHERE id = $${i}
+       RETURNING id, email, username`,
+      values
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "User not found" });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505")
+      return res.status(409).json({ error: "Username or email already taken" });
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET USER BY USERNAME (exact match)
+router.get("/by-username/:username", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, wins, matches, score, rank FROM auth.users WHERE username = $1`,
+      [req.params.username]
+    );
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "User not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// GET USER BY ID
 router.get("/:id", async (req, res) => {
 
   try {

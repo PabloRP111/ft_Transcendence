@@ -45,6 +45,36 @@ router.get("/me", authMiddleware, async (req, res) => {
   }
 });
 
+// GET USER BY USERNAME
+router.get("/users/by-username/:username", authMiddleware, async (req, res) => {
+  try {
+    const response = await fetch(`${USERS_SERVICE}/by-username/${encodeURIComponent(req.params.username)}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok)
+      return res.status(response.status).json({ error: data?.error || "User not found" });
+    return res.json(data);
+  } catch (error) {
+    console.error("/users/by-username fetch failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
+
+// GET ANY USER PROFILE: Fetch any user's public data by ID
+router.get("/users/:id", authMiddleware, async (req, res) => {
+  try {
+    const response = await fetch(`${USERS_SERVICE}/${req.params.id}`);
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok)
+      return res.status(response.status).json({ error: data?.error || "User not found" });
+
+    return res.json(data);
+  } catch (error) {
+    console.error("/users/:id fetch failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
+
 // UPDATE PROFILE: Update the authenticated user's information
 router.put("/me", authMiddleware, async (req, res) => {
   try {
