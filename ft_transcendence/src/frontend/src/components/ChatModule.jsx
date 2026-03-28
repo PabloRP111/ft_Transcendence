@@ -221,6 +221,7 @@ export default function ChatModule() {
             searchTerm={searchTerm}
             searchResults={searchResults}
             searchLoading={searchLoading}
+            conversations={conversations}
             onSearchChange={handleSearchChange}
             onStartDM={async (userId) => {
               const conv = await createConversation("private", [String(userId)]);
@@ -232,6 +233,7 @@ export default function ChatModule() {
               setConversations(await getConversations());
               openConversation(channelId);
             }}
+            onOpenConversation={openConversation}
             onBack={() => setView("inbox")}
           />
         )}
