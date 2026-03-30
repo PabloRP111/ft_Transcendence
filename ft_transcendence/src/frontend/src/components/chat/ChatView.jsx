@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
 
@@ -13,11 +14,15 @@ export default function ChatView({
   onTyping,
   onSendMessage,
   onBack,
+  onLeaveChannel,
 }) {
   const scrollRef = useRef(null);
   const onlineUsers = usePresence();
+  const navigate = useNavigate();
 
   const isDM = activeConversation?.type === "private";
+  const isArena = activeConversation?.name?.toLowerCase() === "arena_general";
+  const isLeavable = !isDM && !isArena;
   const isOtherOnline = isDM && activeConversation?.participants?.some(
     (p) => onlineUsers.has(String(p.id))
   );
@@ -38,10 +43,22 @@ export default function ChatView({
         >
           <ArrowLeft size={16} />
         </button>
-        <div className="flex flex-col min-w-0">
-          <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 truncate">
-            {activeConversation ? convDisplayName(activeConversation) : "Chat"}
-          </span>
+        <div className="flex flex-col min-w-0 flex-1">
+          {isDM ? (
+            <button
+              onClick={() => {
+                const other = activeConversation?.participants?.[0];
+                if (other?.username) navigate(`/profile/${other.username}`);
+              }}
+              className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 truncate hover:text-cyan-200 transition-colors text-left"
+            >
+              {convDisplayName(activeConversation)}
+            </button>
+          ) : (
+            <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400 truncate">
+              {activeConversation ? convDisplayName(activeConversation) : "Chat"}
+            </span>
+          )}
           {isDM && (
             <span className={`text-[8px] font-mono flex items-center gap-1 ${isOtherOnline ? "text-green-400" : "text-cyan-100/30"}`}>
               <span className={`w-1 h-1 rounded-full inline-block ${isOtherOnline ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" : "bg-gray-600"}`} />
@@ -49,6 +66,15 @@ export default function ChatView({
             </span>
           )}
         </div>
+        {isLeavable && (
+          <button
+            onClick={onLeaveChannel}
+            className="text-cyan-100/20 hover:text-red-400 transition-colors"
+            title="Leave channel"
+          >
+            <LogOut size={14} />
+          </button>
+        )}
       </div>
 
       {/* Messages — flex-col-reverse so scroll starts at bottom without JS */}
@@ -66,7 +92,14 @@ export default function ChatView({
               className={`flex flex-col animate-in fade-in slide-in-from-left-2 ${isMe ? "items-end" : "items-start"}`}
             >
               <span className={`text-[8px] mb-1 font-bold ${isMe ? "text-cyan-300" : "text-cyan-500/60"}`}>
-                {isMe ? "YOU" : (msg.sender?.username || `USER_${msg.senderId}`)}:
+                {isMe ? "YOU" : (
+                  <button
+                    onClick={() => navigate(`/profile/${msg.sender?.username}`)}
+                    className="hover:text-cyan-300 transition-colors"
+                  >
+                    {msg.sender?.username || `USER_${msg.senderId}`}
+                  </button>
+                )}:
               </span>
               <div className={`text-xs p-2 rounded-md font-mono max-w-[90%] ${
                 isMe

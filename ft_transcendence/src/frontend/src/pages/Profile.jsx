@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare } from "lucide-react";
+import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
-import { getCurrentUser } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest } from "../api/friends";
+import { getCurrentUser, searchUsers } from "../api/users";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest } from "../api/friends";
+import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
 import userimage from "../assets/userimage.png";
 
-const TABS = ["Stats", "Friends"];
+const TABS = ["Stats", "Social"];
 
 export default function ProfilePage() {
   const { loading, isAuthenticated } = useAuth();
@@ -22,6 +23,11 @@ export default function ProfilePage() {
   const [tab, setTab] = useState("Stats");
   const [friends, setFriends] = useState([]);
   const [pending, setPending] = useState([]);
+  const [channels, setChannels] = useState([]);
+  const [socialSearch, setSocialSearch] = useState("");
+  const [socialResults, setSocialResults] = useState({ users: [], channels: [] });
+  const [socialActions, setSocialActions] = useState({}); // tracks per-id action state: "pending" | "done"
+  const socialSearchTimer = useRef(null);
 
   useEffect(() => {
     if (loading || !isAuthenticated) return;
@@ -42,9 +48,13 @@ export default function ProfilePage() {
   }, [loading, isAuthenticated]);
 
   useEffect(() => {
-    if (tab !== "Friends") return;
-    Promise.all([getFriends(), getPendingRequests()])
-      .then(([f, p]) => { setFriends(f); setPending(p); })
+    if (tab !== "Social") return;
+    Promise.all([getFriends(), getPendingRequests(), getConversations()])
+      .then(([f, p, convs]) => {
+        setFriends(f);
+        setPending(p);
+        setChannels(convs.filter((c) => c.type === "channel" && c.name?.toLowerCase() !== "arena_general"));
+      })
       .catch(() => {});
   }, [tab]);
 
@@ -58,6 +68,25 @@ export default function ProfilePage() {
   const handleDecline = async (requesterId) => {
     await declineFriendRequest(requesterId);
     setPending((prev) => prev.filter((p) => p.id !== requesterId));
+  };
+
+  const handleLeaveChannel = async (convId) => {
+    await leaveChannel(convId);
+    setChannels((prev) => prev.filter((c) => c.id !== convId));
+  };
+
+  const handleSocialSearch = (e) => {
+    const q = e.target.value;
+    setSocialSearch(q);
+    clearTimeout(socialSearchTimer.current);
+    if (!q.trim()) { setSocialResults({ users: [], channels: [] }); return; }
+    socialSearchTimer.current = setTimeout(async () => {
+      const [users, channels] = await Promise.all([
+        searchUsers(q).catch(() => []),
+        searchChannels(q).catch(() => []),
+      ]);
+      setSocialResults({ users, channels });
+    }, 300);
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-cyan-400 font-mono">INITIALIZING_SESSION...</div>;
@@ -115,7 +144,7 @@ export default function ProfilePage() {
                 }`}
               >
                 {t}
-                {t === "Friends" && pending.length > 0 && (
+                {t === "Social" && pending.length > 0 && (
                   <span className="ml-1.5 rounded-full bg-orange-500 px-1.5 py-0.5 text-[9px] text-white">
                     {pending.length}
                   </span>
@@ -144,9 +173,102 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Friends tab */}
-          {tab === "Friends" && (
+          {/* Social tab */}
+          {tab === "Social" && (
             <div className="mt-8 space-y-6 text-left">
+
+              {/* Search bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-500/40" size={13} />
+                <input
+                  type="text"
+                  value={socialSearch}
+                  onChange={handleSocialSearch}
+                  placeholder="Search users or channels..."
+                  className="w-full bg-voidBlack/50 border border-cyan-500/20 rounded-md py-2 pl-8 pr-3 text-xs text-cyan-50 placeholder-cyan-700/50 focus:outline-none focus:border-cyan-400/50 font-mono"
+                />
+              </div>
+
+              {/* Search results */}
+              {socialSearch.trim() && (
+                <div className="space-y-4">
+                  {socialResults.users.length > 0 && (
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Users</p>
+                      <div className="space-y-2">
+                        {socialResults.users.map((u) => {
+                          const action = socialActions[`user-${u.id}`];
+                          return (
+                            <div key={u.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
+                              <button onClick={() => navigate(`/profile/${u.username}`)} className="text-sm text-cyan-50 hover:text-cyan-300 transition-colors">
+                                {u.username}
+                              </button>
+                              <div className="flex gap-2">
+                                {action === "done" ? (
+                                  <span className="text-[9px] uppercase tracking-widest text-green-400">Sent</span>
+                                ) : (
+                                  <button
+                                    disabled={action === "pending"}
+                                    onClick={async () => {
+                                      setSocialActions((prev) => ({ ...prev, [`user-${u.id}`]: "pending" }));
+                                      await sendFriendRequest(u.id).catch(() => {});
+                                      setSocialActions((prev) => ({ ...prev, [`user-${u.id}`]: "done" }));
+                                    }}
+                                    className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors disabled:opacity-40"
+                                  >
+                                    <UserPlus size={11} /> Add
+                                  </button>
+                                )}
+                                <button onClick={() => navigate(`/?dm=${u.id}`)} className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors">
+                                  <MessageSquare size={11} /> DM
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {socialResults.channels.length > 0 && (
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Channels</p>
+                      <div className="space-y-2">
+                        {socialResults.channels.map((c) => {
+                          const action = socialActions[`channel-${c.id}`];
+                          const alreadyJoined = channels.some((ch) => ch.id === c.id);
+                          return (
+                            <div key={c.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
+                              <button onClick={() => navigate(`/?channel=${c.id}`)} className="flex items-center gap-2 text-sm text-cyan-50 hover:text-cyan-300 transition-colors">
+                                <Hash size={13} className="text-cyan-500/60" />
+                                {c.name}
+                              </button>
+                              {alreadyJoined || action === "done" ? (
+                                <span className="text-[9px] uppercase tracking-widest text-cyan-400/50">Joined</span>
+                              ) : (
+                                <button
+                                  disabled={action === "pending"}
+                                  onClick={async () => {
+                                    setSocialActions((prev) => ({ ...prev, [`channel-${c.id}`]: "pending" }));
+                                    await joinChannel(c.id).catch(() => {});
+                                    setSocialActions((prev) => ({ ...prev, [`channel-${c.id}`]: "done" }));
+                                    setChannels((prev) => [...prev, { id: c.id, name: c.name, type: "channel" }]);
+                                  }}
+                                  className="text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors disabled:opacity-40"
+                                >
+                                  Join
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {socialResults.users.length === 0 && socialResults.channels.length === 0 && (
+                    <p className="text-center text-xs text-cyan-100/30 uppercase tracking-widest">No results</p>
+                  )}
+                </div>
+              )}
 
               {/* Pending requests */}
               {pending.length > 0 && (
@@ -204,6 +326,34 @@ export default function ProfilePage() {
                   )}
                 </>
               )}
+
+              {/* Channels */}
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Channels</p>
+                {channels.length === 0 ? (
+                  <p className="text-center text-xs text-cyan-100/30 uppercase tracking-widest mt-2">No channels joined</p>
+                ) : (
+                  <div className="space-y-2">
+                    {channels.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
+                        <button
+                          onClick={() => navigate(`/?channel=${c.id}`)}
+                          className="flex items-center gap-2 text-sm text-cyan-50 hover:text-cyan-300 transition-colors"
+                        >
+                          <Hash size={13} className="text-cyan-500/60" />
+                          {c.name}
+                        </button>
+                        <button
+                          onClick={() => handleLeaveChannel(c.id)}
+                          className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                        >
+                          <LogOut size={11} /> Leave
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

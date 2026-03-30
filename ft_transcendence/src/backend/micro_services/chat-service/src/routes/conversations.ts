@@ -229,6 +229,50 @@ router.post('/:id/participants', async (req: Request, res: Response): Promise<vo
   }
 });
 
+// ─── DELETE /conversations/:id/participants ────────────────────────────────────
+// Leave a channel. The requesting user is removed from the participants list.
+// Guards: must be a channel (not a DM), and cannot leave Arena_General.
+
+router.delete('/:id/participants', async (req: Request, res: Response): Promise<void> => {
+  const conversationId = req.params.id;
+  const userId = parseInt(req.userId, 10);
+
+  try {
+    const convResult = await pool.query<{ type: string; name: string | null }>(
+      `SELECT type, name FROM chat.conversations WHERE id = $1`,
+      [conversationId],
+    );
+
+    if (convResult.rows.length === 0) {
+      res.status(404).json({ error: 'conversation not found' });
+      return;
+    }
+
+    const { type, name } = convResult.rows[0];
+
+    if (type !== 'channel') {
+      res.status(403).json({ error: 'cannot leave a private conversation' });
+      return;
+    }
+
+    if (name?.toLowerCase() === 'arena_general') {
+      res.status(403).json({ error: 'cannot leave arena_general' });
+      return;
+    }
+
+    await pool.query(
+      `DELETE FROM chat.conversation_participants
+       WHERE conversation_id = $1 AND user_id = $2`,
+      [conversationId, userId],
+    );
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error('[DELETE /conversations/:id/participants] error:', err);
+    res.status(500).json({ error: 'internal server error' });
+  }
+});
+
 // ─── GET /conversations ────────────────────────────────────────────────────────
 
 router.get('/', async (req: Request, res: Response): Promise<void> => {

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams } from "react-router-dom";
 
 // API & Hooks
-import { getConversations, getMessages, createConversation, searchChannels, joinChannel } from "../api/chat";
+import { getConversations, getMessages, createConversation, searchChannels, joinChannel, leaveChannel } from "../api/chat";
 import { searchUsers } from "../api/users";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -47,6 +47,7 @@ export default function ChatModule() {
   const [creating, setCreating] = useState(false);
 
   const [pendingDmUserId, setPendingDmUserId] = useState(null);
+  const [pendingChannelId, setPendingChannelId] = useState(null);
 
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -110,11 +111,13 @@ export default function ChatModule() {
     initializeChat();
   }, [loading, isAuthenticated]);
 
-  // ── Handle ?dm=userId — step 1: capture param and clear URL immediately ────
+  // ── Handle ?dm=userId and ?channel=convId — step 1: capture params ─────────
   useEffect(() => {
     const dmUserId = searchParams.get("dm");
-    if (!dmUserId) return;
-    setPendingDmUserId(dmUserId);
+    const channelId = searchParams.get("channel");
+    if (!dmUserId && !channelId) return;
+    if (dmUserId) setPendingDmUserId(dmUserId);
+    if (channelId) setPendingChannelId(channelId);
     setSearchParams({}, { replace: true });
   }, [searchParams]);
 
@@ -136,6 +139,14 @@ export default function ChatModule() {
     }
     openDM();
   }, [pendingDmUserId, conversations.length]);
+
+  // ── Handle ?channel=convId — step 2: open channel once conversations loaded ─
+  useEffect(() => {
+    if (!pendingChannelId || conversations.length === 0) return;
+    const channelId = pendingChannelId;
+    setPendingChannelId(null);
+    openConversation(Number(channelId));
+  }, [pendingChannelId, conversations.length]);
 
   // ── Load History ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -224,6 +235,11 @@ export default function ChatModule() {
             unreadIds={unreadIds}
             onOpenConversation={openConversation}
             onNavigate={setView}
+            onLeaveChannel={async (convId) => {
+              await leaveChannel(convId);
+              setConversations((prev) => prev.filter((c) => c.id !== convId));
+              if (activeConversationId === convId) setActiveConversationId(null);
+            }}
           />
         )}
 
@@ -237,6 +253,12 @@ export default function ChatModule() {
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
             onBack={() => setView("inbox")}
+            onLeaveChannel={async () => {
+              await leaveChannel(activeConversationId);
+              setConversations((prev) => prev.filter((c) => c.id !== activeConversationId));
+              setActiveConversationId(null);
+              setView("inbox");
+            }}
           />
         )}
 

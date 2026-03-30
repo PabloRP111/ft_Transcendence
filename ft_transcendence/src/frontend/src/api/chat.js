@@ -72,6 +72,15 @@ export async function sendMessageREST(conversationId, content) {
 }
 
 /**
+ * Leave a channel. Fails if the conversation is a DM or Arena_General.
+ */
+export async function leaveChannel(conversationId) {
+  return apiFetch(`/chat/conversations/${conversationId}/participants`, {
+    method: "DELETE",
+  });
+}
+
+/**
  * Edit an existing message.
  * Backend constraint: Only the original sender can perform this action.
  */

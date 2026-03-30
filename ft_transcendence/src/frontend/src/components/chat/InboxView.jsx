@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, LogOut } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
 
@@ -10,6 +10,7 @@ export default function InboxView({
   unreadIds,
   onOpenConversation,
   onNavigate,
+  onLeaveChannel,
 }) {
   const onlineUsers = usePresence();
 
@@ -78,19 +79,34 @@ export default function InboxView({
             ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]"
             : "bg-gray-600";
 
+          const isLeavable = conv.type === "channel" && !isArena;
+
           return (
             <Fragment key={conv.id}>
               <div
-                onClick={() => onOpenConversation(conv.id)}
-                className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-all
+                className={`flex items-center gap-2 p-2 border rounded transition-all
                   ${activeConversationId === conv.id
                     ? "border-cyan-500/60 bg-cyan-950/40"
                     : "border-cyan-500/10 bg-cyan-950/20 hover:border-cyan-500/30"}`}
               >
-                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotClass}`} />
-                <span className="text-[11px] text-cyan-50 font-mono truncate">
-                  {convDisplayName(conv)}
-                </span>
+                <div
+                  onClick={() => onOpenConversation(conv.id)}
+                  className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dotClass}`} />
+                  <span className="text-[11px] text-cyan-50 font-mono truncate">
+                    {convDisplayName(conv)}
+                  </span>
+                </div>
+                {isLeavable && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onLeaveChannel?.(conv.id); }}
+                    className="flex-shrink-0 text-cyan-100/20 hover:text-red-400 transition-colors"
+                    title="Leave channel"
+                  >
+                    <LogOut size={12} />
+                  </button>
+                )}
               </div>
               {/* Divider pins arena_general above the rest */}
               {isArena && idx < sorted.length - 1 && (
