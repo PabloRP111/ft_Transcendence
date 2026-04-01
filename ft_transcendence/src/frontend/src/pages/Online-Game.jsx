@@ -174,10 +174,6 @@ export default function TronDuelArena() {
             </span>
 
           </motion.div>
-
-
-          
-
         </div>
 
 

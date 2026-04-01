@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
 import { UserRound, Heart } from "lucide-react";
+import aiAvatar from "../assets/ai_profile.jpg";
 
 // Game Logic & Components
 import TronCanvas from "../components/TronCanvas";
@@ -192,7 +193,13 @@ export default function TronDuelArena() {
             transition={{ repeat: Infinity, duration: 1.4 }}
             className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]"
           >
-            <UserRound size={50} />
+            <div className="h-24 w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
+              <img
+                src={aiAvatar}
+                alt="AI Avatar"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </motion.div>
 
           <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
