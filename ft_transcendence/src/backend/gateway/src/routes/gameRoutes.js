@@ -37,4 +37,25 @@ router.post("/:matchId/reset-round", async (req, res) => {
   return proxyRequest(req, res, `/${req.params.matchId}/reset-round`);
 });
 
+// GET /config
+router.get("/config", async (req, res) => {
+  try {
+    const response = await fetch(`${GAME_SERVICE}/config`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const payload = await response.json().catch(() => ({ error: "Game service response error" }));
+
+    if (!response.ok) {
+      return res.status(response.status).json(payload);
+    }
+
+    return res.json(payload);
+  } catch (error) {
+    console.error("Game config proxy error:", error);
+    return res.status(503).json({ error: "Game service unavailable" });
+  }
+});
+
 export default router;

@@ -1,21 +1,14 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { UserRound, Heart } from "lucide-react";
 import aiAvatar from "../assets/ai_profile.jpg";
-
-// Game Logic & Components
 import TronCanvas from "../components/TronCanvas";
-import { useTronMatch } from "../hooks/useTronMatchAPI";
-import { STARTING_LIVES } from "../game/tron/constants";
-import { PLAYER_ONE_KEYMAP } from "../game/tron/input";
+import { useTronBackendMatch } from "../hooks/useTronMatchAPI";
 
-/**
- * Lives Component: Renders the heart icons based on player's current health.
- */
-function Lives({ lives }) {
+function Lives({ lives, maxLives }) {
   return (
     <div className="flex gap-2">
-      {Array.from({ length: STARTING_LIVES }).map((_, i) => (
+      {Array.from({ length: maxLives }).map((_, i) => (
         <motion.div
           key={i}
           animate={i < lives ? { scale: [1, 1.2, 1] } : {}}
@@ -36,41 +29,37 @@ function Lives({ lives }) {
 }
 
 export default function TronDuelArena() {
-  const {
-    engineRef,
-    phase,
-    countdown,
-    overlayText,
-    hud,
-    matchResult,
-    queueDirection,
-    restartMatch,
-  } = useTronMatch();
+  const { config, state, matchResult, sendMove, restartMatch } = useTronBackendMatch();
+  const engineRef = useRef(state);
 
-  const player1 = hud.players[0];
-  const player2 = hud.players[1];
+  useEffect(() => { engineRef.current = state }, [state]);
 
-  // ── Keyboard Input Management ──────────────────────────────────────────────
+  // Keyboard input
   useEffect(() => {
+    if (!config || !state)
+      return;
+
     const handleKeyDown = (event) => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-      const nextDirection = PLAYER_ONE_KEYMAP[key];
-
-      // Block input if game is finished or key is not mapped
-      if (!nextDirection || phase === "finished") return;
-
+      const nextDirection = config.playerKeymap[key];
+      if (!nextDirection) return;
       event.preventDefault();
-      queueDirection(1, nextDirection);
+      sendMove(1, nextDirection);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase, queueDirection]);
+  }, [config, state, sendMove]);
+
+  if (!config)
+    return <div>Loading...</div>;
+
+  const player1 = state?.players[0];
+  const player2 = state?.players[1];
+
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
-      
-      {/* ── BACKGROUND ATMOSPHERE ── */}
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />
@@ -79,7 +68,7 @@ export default function TronDuelArena() {
 
       <main className="relative z-20 flex items-center justify-center gap-16 px-10 py-16">
 
-        {/* ── PLAYER LEFT (USER) ── */}
+        {/* PLAYER 1 */}
         <motion.section
           initial={{ x: -200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -98,14 +87,14 @@ export default function TronDuelArena() {
             {player1?.name ?? "Player"}
           </h2>
 
-          <Lives lives={player1?.lives ?? STARTING_LIVES} />
+          <Lives lives={player1?.lives ?? config.startingLives} maxLives={config.startingLives} />
 
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
-            Score {player1?.score ?? 0}
+            Matches Won {state?.matchesWon?.[0] ?? 0}
           </p>
         </motion.section>
 
-        {/* ── CENTER ARENA ── */}
+        {/* ARENA */}
         <div className="flex flex-col items-center gap-10">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -113,67 +102,45 @@ export default function TronDuelArena() {
             transition={{ delay: 0.3 }}
             className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]"
           >
-            {/* Neon Pulse Effect */}
             <motion.div
               className="absolute inset-0 rounded-xl"
               animate={{
-                boxShadow: [
-                  "0 0 20px #00f7ff",
-                  "0 0 60px #00f7ff",
-                  "0 0 20px #00f7ff",
-                ],
+                boxShadow: ["0 0 20px #00f7ff", "0 0 60px #00f7ff", "0 0 20px #00f7ff"],
               }}
               transition={{ repeat: Infinity, duration: 2 }}
             />
 
-            {/* Game Canvas Engine */}
-            <TronCanvas engineRef={engineRef} />
+            <TronCanvas engineState={state} config={config} />
 
-            {/* UI Overlays (Countdown, Ready, Fight, Finished) */}
-            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-              <AnimatePresence>
-                {phase === "countdown" && (
-                  <motion.div
-                    key="countdown"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [1, 1.4, 1] }}
-                    exit={{ opacity: 0, scale: 2 }}
-                    className="text-6xl font-bold text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
+            {/* Overlays */}
+            {matchResult && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md border border-cyan-500/30"
+              >
+                {/* Título del Ganador con clase neon-title */}
+                <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100">
+                  {matchResult === "DRAW" ? "DRAW" : `${matchResult} WINS`}
+                </h2>
+
+                {/* Contenedor de botones con más margen superior (mt-12) */}
+                <div className="flex gap-6 mt-12">
+                  <button
+                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm"
+                    onClick={restartMatch}
                   >
-                    {countdown}
-                  </motion.div>
-                )}
-
-                {(phase === "ready" || phase === "fight") && (
-                  <motion.div
-                    key="overlay-text"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [1, 1.3, 1] }}
-                    className={
-                      phase === "fight"
-                        ? "text-6xl font-bold text-red-400 drop-shadow-[0_0_25px_red]"
-                        : "text-5xl font-bold text-cyan-300 drop-shadow-[0_0_25px_#00f7ff]"
-                    }
+                    Restart Match
+                  </button>
+                  <button
+                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm"
+                    onClick={() => window.location.href = "/"}
                   >
-                    {overlayText}
-                  </motion.div>
-                )}
-
-                {phase === "finished" && (
-                  <div className="pointer-events-auto flex flex-col items-center justify-center gap-6 bg-black/65 p-12 rounded-2xl backdrop-blur-sm border border-cyan-500/50">
-                    <p className="text-3xl uppercase tracking-[0.22em] text-cyan-100">
-                      {matchResult}
-                    </p>
-                    <button
-                      className="neon-button px-8 py-3 bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-400 text-cyan-100 transition-all uppercase tracking-widest"
-                      onClick={restartMatch}
-                    >
-                      Restart Match
-                    </button>
-                  </div>
-                )}
-              </AnimatePresence>
-            </div>
+                    Back to Home
+                  </button>
+                </div>
+              </motion.div>
+            )}
           </motion.div>
 
           <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/75">
@@ -181,7 +148,7 @@ export default function TronDuelArena() {
           </p>
         </div>
 
-        {/* ── PLAYER RIGHT (AI or P2) ── */}
+        {/* PLAYER 2 (AI) */}
         <motion.section
           initial={{ x: 200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -206,13 +173,12 @@ export default function TronDuelArena() {
             {player2?.name ?? "AI_CORE"}
           </h2>
 
-          <Lives lives={player2?.lives ?? STARTING_LIVES} />
+          <Lives lives={player2?.lives ?? config.startingLives} maxLives={config.startingLives} />
 
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
-            Score {player2?.score ?? 0}
+            Matches Won {state?.matchesWon?.[1] ?? 0} 
           </p>
         </motion.section>
-
       </main>
     </div>
   );

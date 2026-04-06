@@ -20,3 +20,9 @@ export function resetRoundGameMatch(matchId) {
     body: JSON.stringify({}),
   });
 }
+
+export function getConfig() {
+  return apiFetch(`/game/config`, {
+    method: "GET",
+  });
+}

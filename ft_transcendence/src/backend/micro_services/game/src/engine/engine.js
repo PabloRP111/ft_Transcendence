@@ -22,7 +22,6 @@ function makePlayer(id, name, x, y, dir, isAi = false) {
     pendingDir: null,
     alive: true,
     lives: STARTING_LIVES,
-    score: 0,
   };
 }
 
@@ -30,16 +29,12 @@ function seedPlayerOnBoard(board, player) {
   board[toIndex(player.x, player.y)] = player.id;
 }
 
-export function createMatchState() {
+export function createMatchState(previousMatchesWon = [0,0]) {
   const board = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
-
   const players = [
     makePlayer(1, "Player", 20, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.RIGHT),
     makePlayer(2, "AI", GRID_WIDTH - 21, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.LEFT, true),
   ];
-
-  seedPlayerOnBoard(board, players[0]);
-  seedPlayerOnBoard(board, players[1]);
 
   return {
     board,
@@ -48,6 +43,7 @@ export function createMatchState() {
     roundOver: false,
     winnerId: null,
     draw: false,
+    matchesWon: previousMatchesWon,
   };
 }
 
@@ -108,38 +104,26 @@ function willCollide(board, x, y) {
 }
 
 export function stepSimulation(state) {
-  if (state.roundOver) {
+  if (state.roundOver)
     return state;
-  }
 
   state.tick += 1;
 
-  const alivePlayers = state.players.filter((p) => p.alive);
-  for (const player of alivePlayers) {
-    applyPendingDirection(player);
-  }
+  const alivePlayers = state.players.filter(p => p.alive);
+  alivePlayers.forEach(applyPendingDirection);
 
-  const intents = alivePlayers.map((player) => {
-    const vector = DIRECTION_VECTORS[player.dir];
-    return {
-      player,
-      nextX: player.x + vector.x,
-      nextY: player.y + vector.y,
-    };
+  const intents = alivePlayers.map(player => {
+    const vec = DIRECTION_VECTORS[player.dir];
+    return { player, nextX: player.x + vec.x, nextY: player.y + vec.y };
   });
 
   const collisions = new Set();
-
   for (const intent of intents) {
-    if (willCollide(state.board, intent.nextX, intent.nextY)) {
-      collisions.add(intent.player.id);
-    }
+    if (willCollide(state.board, intent.nextX, intent.nextY)) collisions.add(intent.player.id);
   }
 
   if (intents.length === 2) {
-    const first = intents[0];
-    const second = intents[1];
-
+    const [first, second] = intents;
     if (first.nextX === second.nextX && first.nextY === second.nextY) {
       collisions.add(first.player.id);
       collisions.add(second.player.id);
@@ -151,30 +135,30 @@ export function stepSimulation(state) {
       intent.player.alive = false;
       continue;
     }
-
     intent.player.x = intent.nextX;
     intent.player.y = intent.nextY;
     state.board[toIndex(intent.nextX, intent.nextY)] = intent.player.id;
   }
 
-  const stillAlive = state.players.filter((p) => p.alive);
+  const stillAlive = state.players.filter(p => p.alive);
 
   if (stillAlive.length <= 1) {
     state.roundOver = true;
 
     if (stillAlive.length === 1) {
       const winner = stillAlive[0];
+      const loser = state.players.find(p => p.id !== winner.id);
+      if (loser) loser.lives = Math.max(0, loser.lives - 1);
       state.winnerId = winner.id;
-      winner.score += 1;
-      const loser = state.players.find((p) => p.id !== winner.id);
-      if (loser) {
-        loser.lives = Math.max(0, loser.lives - 1);
-      }
     } else {
-      state.draw = true;
-      state.players.forEach((p) => {
-        p.lives = Math.max(0, p.lives - 1);
-      });
+      state.players.forEach(p => p.lives = Math.max(0, p.lives - 1));
+      state.winnerId = null;
+    }
+
+    if (isMatchOver(state)) {
+      const winnerIndex = state.players.findIndex(p => p.lives > 0);
+      if (winnerIndex >= 0)
+        state.matchesWon[winnerIndex] += 1;
     }
   }
 
@@ -186,10 +170,9 @@ export function isMatchOver(state) {
 }
 
 export function getMatchWinner(state) {
-  const sorted = [...state.players].sort((a, b) => b.lives - a.lives || b.score - a.score);
-  if (sorted[0].lives === sorted[1].lives && sorted[0].score === sorted[1].score) {
+  if (!state.roundOver)
     return null;
-  }
-
-  return sorted[0];
+  const winner = state.players.find(p => p.alive);
+  return winner ?? null;
 }
+

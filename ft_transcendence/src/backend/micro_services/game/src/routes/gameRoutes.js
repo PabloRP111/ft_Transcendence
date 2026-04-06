@@ -8,15 +8,23 @@ import {
   resetRound,
 } from "../engine/engine.js";
 import { chooseAiDirection } from "../engine/ai.js";
+import {
+  GRID_WIDTH,
+  GRID_HEIGHT,
+  CELL_SIZE,
+  PLAYER_COLORS,
+  TICK_MS,
+  STARTING_LIVES
+} from "../engine/constants.js";
 
 const router = express.Router();
 
-// En memoria por simplicidad; puedes usar Redis o DB para varias partidas
 const matches = {};
 
 router.post("/create", (req, res) => {
-  const matchId = Date.now().toString(); // simple ID temporal
-  matches[matchId] = createMatchState();
+  const matchId = Date.now().toString();
+  const previousMatchesWon = req.body.previousMatchesWon || [0,0];
+  matches[matchId] = createMatchState(previousMatchesWon);
   res.json({ matchId, state: matches[matchId] });
 });
 
@@ -27,10 +35,11 @@ router.post("/:matchId/move", (req, res) => {
   const state = matches[matchId];
   if (!state) return res.status(404).json({ error: "Match not found" });
 
-  if (typeof playerId !== "number") {
-    return res.status(400).json({ error: "playerId must be a number" });
+  if (direction && typeof playerId === "number") {
+    queuePlayerDirection(state, playerId, direction);
   }
 
+  // Solo aplica input si hay dirección
   if (direction) {
     queuePlayerDirection(state, playerId, direction);
   }
@@ -46,6 +55,7 @@ router.post("/:matchId/move", (req, res) => {
 
   let matchOver = false;
   let winner = null;
+
   if (state.roundOver && isMatchOver(state)) {
     matchOver = true;
     winner = getMatchWinner(state);
@@ -68,6 +78,28 @@ router.post("/:matchId/reset-round", (req, res) => {
 
   resetRound(state);
   return res.json({ state });
+});
+
+// GET /game/config
+router.get("/config", (req, res) => {
+  res.json({
+    gridWidth: GRID_WIDTH,
+    gridHeight: GRID_HEIGHT,
+    cellSize: CELL_SIZE,
+    playerColors: PLAYER_COLORS,
+    tickMs: TICK_MS,
+    startingLives: STARTING_LIVES,
+    playerKeymap: {
+      w: "UP",
+      a: "LEFT",
+      s: "DOWN",
+      d: "RIGHT",
+      ArrowUp: "UP",
+      ArrowLeft: "LEFT",
+      ArrowDown: "DOWN",
+      ArrowRight: "RIGHT",
+    },
+  });
 });
 
 export default router;
