@@ -1,9 +1,9 @@
 import { apiFetch } from "./client";
 
-export function createGameMatch() {
+export function createGameMatch(payload) {
   return apiFetch("/game/create", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(payload),
   });
 }
 

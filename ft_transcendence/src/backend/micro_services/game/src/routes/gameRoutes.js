@@ -23,7 +23,7 @@ const matches = {};
 
 router.post("/create", (req, res) => {
   const matchId = Date.now().toString();
-  const previousMatchesWon = req.body.previousMatchesWon || [0,0];
+  const previousMatchesWon = req.body.previousMatchesWon;
   matches[matchId] = createMatchState(previousMatchesWon);
   res.json({ matchId, state: matches[matchId] });
 });
@@ -33,18 +33,13 @@ router.post("/:matchId/move", (req, res) => {
   const { matchId } = req.params;
 
   const state = matches[matchId];
-  if (!state) return res.status(404).json({ error: "Match not found" });
+  if (!state) 
+    return res.status(404).json({ error: "Match not found" });
 
   if (direction && typeof playerId === "number") {
     queuePlayerDirection(state, playerId, direction);
   }
 
-  // Solo aplica input si hay dirección
-  if (direction) {
-    queuePlayerDirection(state, playerId, direction);
-  }
-
-  // IA
   const aiPlayer = state.players.find(p => p.isAi && p.alive);
   if (aiPlayer) {
     const aiDir = chooseAiDirection(state, aiPlayer);
@@ -53,15 +48,11 @@ router.post("/:matchId/move", (req, res) => {
 
   stepSimulation(state);
 
-  let matchOver = false;
-  let winner = null;
-
-  if (state.roundOver && isMatchOver(state)) {
-    matchOver = true;
-    winner = getMatchWinner(state);
-  }
-
-  res.json({ state, matchOver, winner });
+  res.json({ 
+    state, 
+    matchOver: state.matchOver, 
+    winner: state.winner 
+  });
 });
 
 router.post("/:matchId/reset-round", (req, res) => {

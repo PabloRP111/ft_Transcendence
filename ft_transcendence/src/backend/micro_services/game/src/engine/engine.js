@@ -7,172 +7,123 @@ import {
   STARTING_LIVES,
 } from "./constants.js";
 
-function toIndex(x, y) {
-  return y * GRID_WIDTH + x;
-}
+function toIndex(x, y) { return y * GRID_WIDTH + x; }
 
 function makePlayer(id, name, x, y, dir, isAi = false) {
-  return {
-    id,
-    name,
-    isAi,
-    x,
-    y,
-    dir,
-    pendingDir: null,
-    alive: true,
-    lives: STARTING_LIVES,
-  };
+  return { id, name, isAi, x, y, dir, pendingDir: null, alive: true, lives: STARTING_LIVES };
 }
 
-function seedPlayerOnBoard(board, player) {
-  board[toIndex(player.x, player.y)] = player.id;
-}
-
-export function createMatchState(previousMatchesWon = [0,0]) {
-  const board = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
-  const players = [
-    makePlayer(1, "Player", 20, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.RIGHT),
-    makePlayer(2, "AI", GRID_WIDTH - 21, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.LEFT, true),
-  ];
-
-  return {
-    board,
+export function createMatchState(previousMatchesWon = [0, 0]) {
+  const state = {
+    board: new Uint8Array(GRID_WIDTH * GRID_HEIGHT),
     tick: 0,
-    players,
+    roundNumber: 1,
+    players: [
+      makePlayer(1, "Player", 20, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.RIGHT),
+      makePlayer(2, "AI", GRID_WIDTH - 21, Math.floor(GRID_HEIGHT / 2), DIRECTIONS.LEFT, true),
+    ],
     roundOver: false,
-    winnerId: null,
-    draw: false,
-    matchesWon: previousMatchesWon,
+    matchOver: false,
+    winner: null,
+    matchesWon: [...previousMatchesWon],
   };
+  state.players.forEach(p => state.board[toIndex(p.x, p.y)] = p.id);
+  return state;
 }
 
 export function resetRound(state) {
+  if (state.matchOver) 
+    return state;
+
   state.board.fill(0);
   state.tick = 0;
   state.roundOver = false;
-  state.winnerId = null;
-  state.draw = false;
+  state.roundNumber += 1;
 
-  const p1 = state.players[0];
-  const p2 = state.players[1];
-
-  p1.x = 20;
-  p1.y = Math.floor(GRID_HEIGHT / 2);
-  p1.dir = DIRECTIONS.RIGHT;
-  p1.pendingDir = null;
-  p1.alive = true;
-
-  p2.x = GRID_WIDTH - 21;
-  p2.y = Math.floor(GRID_HEIGHT / 2);
-  p2.dir = DIRECTIONS.LEFT;
-  p2.pendingDir = null;
-  p2.alive = true;
-
-  seedPlayerOnBoard(state.board, p1);
-  seedPlayerOnBoard(state.board, p2);
-}
-
-export function queuePlayerDirection(state, playerId, nextDir) {
-  const player = state.players.find((p) => p.id === playerId);
-  if (!player || !player.alive) {
-    return;
-  }
-
-  if (nextDir === player.dir || OPPOSITE_DIRECTION[player.dir] === nextDir) {
-    return;
-  }
-
-  player.pendingDir = nextDir;
-}
-
-function applyPendingDirection(player) {
-  if (!player.pendingDir) {
-    return;
-  }
-
-  player.dir = player.pendingDir;
-  player.pendingDir = null;
-}
-
-function willCollide(board, x, y) {
-  if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) {
-    return true;
-  }
-
-  return board[toIndex(x, y)] !== 0;
+  state.players.forEach(p => {
+    p.x = p.id === 1 ? 20 : GRID_WIDTH - 21;
+    p.y = Math.floor(GRID_HEIGHT / 2);
+    p.dir = p.id === 1 ? DIRECTIONS.RIGHT : DIRECTIONS.LEFT;
+    p.pendingDir = null;
+    p.alive = true;
+    state.board[toIndex(p.x, p.y)] = p.id;
+  });
+  return state;
 }
 
 export function stepSimulation(state) {
-  if (state.roundOver)
-    return state;
+  if (state.roundOver || state.matchOver) return state;
 
   state.tick += 1;
-
   const alivePlayers = state.players.filter(p => p.alive);
-  alivePlayers.forEach(applyPendingDirection);
-
-  const intents = alivePlayers.map(player => {
-    const vec = DIRECTION_VECTORS[player.dir];
-    return { player, nextX: player.x + vec.x, nextY: player.y + vec.y };
+  
+  const intents = alivePlayers.map(p => {
+    if (p.pendingDir) { p.dir = p.pendingDir; p.pendingDir = null; }
+    const vec = DIRECTION_VECTORS[p.dir];
+    return { p, nx: p.x + vec.x, ny: p.y + vec.y };
   });
 
   const collisions = new Set();
-  for (const intent of intents) {
-    if (willCollide(state.board, intent.nextX, intent.nextY)) collisions.add(intent.player.id);
+  intents.forEach(i => {
+    if (i.nx < 0 || i.ny < 0 || i.nx >= GRID_WIDTH || i.ny >= GRID_HEIGHT || state.board[toIndex(i.nx, i.ny)] !== 0) {
+      collisions.add(i.p.id);
+    }
+  });
+
+  if (intents.length === 2 && intents[0].nx === intents[1].nx && intents[0].ny === intents[1].ny) {
+    collisions.add(intents[0].p.id);
+    collisions.add(intents[1].p.id);
   }
 
-  if (intents.length === 2) {
-    const [first, second] = intents;
-    if (first.nextX === second.nextX && first.nextY === second.nextY) {
-      collisions.add(first.player.id);
-      collisions.add(second.player.id);
+  intents.forEach(i => {
+    if (collisions.has(i.p.id)) {
+      i.p.alive = false;
+    } else {
+      i.p.x = i.nx; i.p.y = i.ny;
+      state.board[toIndex(i.nx, i.ny)] = i.p.id;
     }
-  }
-
-  for (const intent of intents) {
-    if (collisions.has(intent.player.id)) {
-      intent.player.alive = false;
-      continue;
-    }
-    intent.player.x = intent.nextX;
-    intent.player.y = intent.nextY;
-    state.board[toIndex(intent.nextX, intent.nextY)] = intent.player.id;
-  }
+  });
 
   const stillAlive = state.players.filter(p => p.alive);
-
   if (stillAlive.length <= 1) {
     state.roundOver = true;
-
+    
     if (stillAlive.length === 1) {
-      const winner = stillAlive[0];
-      const loser = state.players.find(p => p.id !== winner.id);
-      if (loser) loser.lives = Math.max(0, loser.lives - 1);
-      state.winnerId = winner.id;
+      const loser = state.players.find(p => p.id !== stillAlive[0].id);
+      if (loser) loser.lives--;
     } else {
-      state.players.forEach(p => p.lives = Math.max(0, p.lives - 1));
-      state.winnerId = null;
+      state.players.forEach(p => p.lives--);
     }
 
-    if (isMatchOver(state)) {
-      const winnerIndex = state.players.findIndex(p => p.lives > 0);
-      if (winnerIndex >= 0)
-        state.matchesWon[winnerIndex] += 1;
+    const deadPlayer = state.players.find(p => p.lives <= 0);
+    if (deadPlayer) {
+      state.matchOver = true;
+      const winner = state.players.find(p => p.lives > 0);
+      if (winner) {
+        state.winner = winner;
+        state.matchesWon[winner.id - 1]++;
+      }
     }
   }
 
   return state;
 }
 
+export function queuePlayerDirection(state, playerId, direction) {
+  const player = state.players.find(p => p.id === playerId);
+  if (!player || !player.alive) return;
+
+  // Prevent 180-degree turns
+  const opposite = OPPOSITE_DIRECTION[player.dir];
+  if (direction !== opposite) {
+    player.pendingDir = direction;
+  }
+}
+
 export function isMatchOver(state) {
-  return state.players.some((p) => p.lives <= 0);
+  return state.matchOver;
 }
 
 export function getMatchWinner(state) {
-  if (!state.roundOver)
-    return null;
-  const winner = state.players.find(p => p.alive);
-  return winner ?? null;
+  return state.winner;
 }
-
