@@ -1,16 +1,21 @@
-import {
-  DIRECTIONS,
-  DIRECTION_VECTORS,
-  GRID_HEIGHT,
-  GRID_WIDTH,
-  OPPOSITE_DIRECTION,
-  STARTING_LIVES,
-} from "./constants.js";
+import { GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, PLAYER_COLORS, TICK_MS, STARTING_LIVES } from "./constants.js";
+import { DIRECTIONS, DIRECTION_VECTORS, OPPOSITE_DIRECTION } from "./constants.js";
 
 function toIndex(x, y) { return y * GRID_WIDTH + x; }
 
 function makePlayer(id, name, x, y, dir, isAi = false) {
-  return { id, name, isAi, x, y, dir, pendingDir: null, alive: true, lives: STARTING_LIVES };
+  return { 
+    id, 
+    name, 
+    isAi, 
+    x, 
+    y, 
+    dir, 
+    pendingDir: null, 
+    alive: true, 
+    lives: STARTING_LIVES,
+    connected: false
+  };
 }
 
 export function createMatchState(previousMatchesWon = [0, 0]) {
@@ -26,7 +31,10 @@ export function createMatchState(previousMatchesWon = [0, 0]) {
     matchOver: false,
     winner: null,
     matchesWon: [...previousMatchesWon],
+    status: "waiting",
+    mode: null,
   };
+
   state.players.forEach(p => state.board[toIndex(p.x, p.y)] = p.id);
   return state;
 }
@@ -52,21 +60,31 @@ export function resetRound(state) {
 }
 
 export function stepSimulation(state) {
-  if (state.roundOver || state.matchOver) return state;
+  if (state.roundOver || state.matchOver)
+    return state;
 
   state.tick += 1;
   const alivePlayers = state.players.filter(p => p.alive);
   
   const intents = alivePlayers.map(p => {
-    if (p.pendingDir) { p.dir = p.pendingDir; p.pendingDir = null; }
+    if (p.pendingDir) { 
+      p.dir = p.pendingDir; 
+      p.pendingDir = null; 
+    }
     const vec = DIRECTION_VECTORS[p.dir];
     return { p, nx: p.x + vec.x, ny: p.y + vec.y };
   });
 
   const collisions = new Set();
+
   intents.forEach(i => {
-    if (i.nx < 0 || i.ny < 0 || i.nx >= GRID_WIDTH || i.ny >= GRID_HEIGHT || state.board[toIndex(i.nx, i.ny)] !== 0) {
+    if (i.nx < 0 || i.ny < 0 || i.nx >= GRID_WIDTH || i.ny >= GRID_HEIGHT) {
       collisions.add(i.p.id);
+    } else {
+      const index = toIndex(i.nx, i.ny);
+      if (state.board[index] !== 0) {
+        collisions.add(i.p.id);
+      }
     }
   });
 
@@ -79,7 +97,8 @@ export function stepSimulation(state) {
     if (collisions.has(i.p.id)) {
       i.p.alive = false;
     } else {
-      i.p.x = i.nx; i.p.y = i.ny;
+      i.p.x = i.nx; 
+      i.p.y = i.ny;
       state.board[toIndex(i.nx, i.ny)] = i.p.id;
     }
   });
@@ -111,7 +130,8 @@ export function stepSimulation(state) {
 
 export function queuePlayerDirection(state, playerId, direction) {
   const player = state.players.find(p => p.id === playerId);
-  if (!player || !player.alive) return;
+  if (!player || !player.alive)
+    return;
 
   // Prevent 180-degree turns
   const opposite = OPPOSITE_DIRECTION[player.dir];
@@ -122,8 +142,4 @@ export function queuePlayerDirection(state, playerId, direction) {
 
 export function isMatchOver(state) {
   return state.matchOver;
-}
-
-export function getMatchWinner(state) {
-  return state.winner;
 }
