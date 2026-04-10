@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus } from "lucide-react";
+import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus, ShieldOff, ShieldCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getUserById, getUserByUsername } from "../api/users";
-import { getFriendStatus, sendFriendRequest, removeFriend } from "../api/friends";
+import { getFriendStatus, sendFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
 import userimage from "../assets/userimage.png";
 
@@ -16,7 +16,7 @@ export default function UserProfile() {
 
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState("loading");
-  const [friendStatus, setFriendStatus] = useState("none"); // none | pending_sent | pending_received | accepted
+  const [friendStatus, setFriendStatus] = useState("none"); // none | pending_sent | pending_received | accepted | blocked | blocked_by
   const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
@@ -49,6 +49,28 @@ export default function UserProfile() {
         await removeFriend(profile.id);
         setFriendStatus("none");
       }
+    } finally {
+      setFriendLoading(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!profile || friendLoading) return;
+    setFriendLoading(true);
+    try {
+      await blockUser(profile.id);
+      setFriendStatus("blocked");
+    } finally {
+      setFriendLoading(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!profile || friendLoading) return;
+    setFriendLoading(true);
+    try {
+      await unblockUser(profile.id);
+      setFriendStatus("none");
     } finally {
       setFriendLoading(false);
     }
@@ -122,24 +144,54 @@ export default function UserProfile() {
 
           {/* Action buttons */}
           <div className="mt-6 flex justify-center gap-3">
-            <button
-              onClick={() => navigate(`/?dm=${profile.id}`)}
-              className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs uppercase tracking-widest text-cyan-300 hover:bg-cyan-500/20 transition-colors"
-            >
-              <MessageSquare size={14} /> DM
-            </button>
-            {(() => { const btn = friendButton(); return (
+            {friendStatus === "blocked" ? (
+              // I blocked this user — show Unblock only
               <button
-                onClick={handleFriendAction}
-                disabled={friendLoading || friendStatus === "pending_sent"}
-                className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs uppercase tracking-widest transition-colors ${btn.style}`}
+                onClick={handleUnblock}
+                disabled={friendLoading}
+                className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-xs uppercase tracking-widest text-red-300 hover:bg-red-500/20 transition-colors"
               >
-                {btn.icon} {btn.label}
+                <ShieldCheck size={14} /> Unblock
               </button>
-            ); })()}
+            ) : friendStatus !== "blocked_by" && (
+              // Normal state — show DM, friend action, and block button
+              <>
+                <button
+                  onClick={() => navigate(`/?dm=${profile.id}`)}
+                  className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs uppercase tracking-widest text-cyan-300 hover:bg-cyan-500/20 transition-colors"
+                >
+                  <MessageSquare size={14} /> DM
+                </button>
+                {(() => { const btn = friendButton(); return (
+                  <button
+                    onClick={handleFriendAction}
+                    disabled={friendLoading || friendStatus === "pending_sent"}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-xs uppercase tracking-widest transition-colors ${btn.style}`}
+                  >
+                    {btn.icon} {btn.label}
+                  </button>
+                ); })()}
+                <button
+                  onClick={handleBlock}
+                  disabled={friendLoading}
+                  className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-transparent px-4 py-2 text-xs uppercase tracking-widest text-red-400/60 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/40 transition-colors"
+                  title="Block user"
+                >
+                  <ShieldOff size={14} />
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Stats */}
+          {/* Blocked-by message — shown instead of stats when this user has blocked me */}
+          {friendStatus === "blocked_by" && (
+            <p className="mt-10 text-xs uppercase tracking-[0.2em] text-red-400/60 font-mono">
+              This user has blocked you
+            </p>
+          )}
+
+          {/* Stats — hidden if I am blocked by this user */}
+          {friendStatus !== "blocked_by" && (
           <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="rounded-xl border border-cyan-300/30 bg-cyan-950/10 p-6 backdrop-blur-sm transition-transform hover:scale-105">
               <div className="mb-2 flex items-center justify-center gap-2 text-cyan-400">
@@ -173,6 +225,7 @@ export default function UserProfile() {
               <p className="text-3xl font-bold">#{profile.rank}</p>
             </div>
           </div>
+          )}
 
         </motion.section>
       </motion.main>

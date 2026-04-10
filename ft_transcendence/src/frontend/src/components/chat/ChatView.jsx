@@ -11,6 +11,7 @@ export default function ChatView({
   typingUsers,
   myId,
   input,
+  isBlocked,
   onTyping,
   onSendMessage,
   onBack,
@@ -125,25 +126,33 @@ export default function ChatView({
         </div>
       </div>
 
-      {/* Input */}
-      <form onSubmit={onSendMessage} className="p-4 bg-[#0a0f1a] border-t border-cyan-300/10">
-        <div className="relative group">
-          <input
-            type="text"
-            value={input}
-            onChange={onTyping}
-            className="w-full bg-voidBlack border border-cyan-900/50 rounded-lg p-3 pr-12 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none transition-all font-mono"
-            placeholder="TYPE_MESSAGE..."
-          />
-          <button
-            type="submit"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-500 hover:text-cyan-300 disabled:text-cyan-900"
-            disabled={!activeConversation}
-          >
-            <Send size={18} />
-          </button>
+      {/* Input — replaced with a notice if the DM has a block in either direction */}
+      {isBlocked ? (
+        <div className="p-4 bg-[#0a0f1a] border-t border-cyan-300/10 flex items-center justify-center">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-red-400/60 font-mono">
+            You cannot message this user
+          </p>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={onSendMessage} className="p-4 bg-[#0a0f1a] border-t border-cyan-300/10">
+          <div className="relative group">
+            <input
+              type="text"
+              value={input}
+              onChange={onTyping}
+              className="w-full bg-voidBlack border border-cyan-900/50 rounded-lg p-3 pr-12 text-xs text-cyan-50 placeholder-cyan-700/50 focus:ring-1 focus:ring-cyan-500/50 focus:border-cyan-400 outline-none transition-all font-mono"
+              placeholder="TYPE_MESSAGE..."
+            />
+            <button
+              type="submit"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-500 hover:text-cyan-300 disabled:text-cyan-900"
+              disabled={!activeConversation}
+            >
+              <Send size={18} />
+            </button>
+          </div>
+        </form>
+      )}
     </motion.div>
   );
 }

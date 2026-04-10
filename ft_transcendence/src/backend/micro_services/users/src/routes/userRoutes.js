@@ -165,6 +165,27 @@ router.get("/by-username/:username", async (req, res) => {
 // All friends routes receive X-User-Id from the gateway (injected after JWT validation)
 // req.headers['x-user-id'] is the authenticated user making the request
 
+// GET /users/blocked — list users I have blocked
+router.get("/users/blocked", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.username
+       FROM auth.friendships f
+       JOIN auth.users u ON f.friend_id = u.id
+       WHERE f.user_id = $1 AND f.status = 'blocked'
+       ORDER BY u.username`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 // GET /friends — list accepted friends with their stats
 router.get("/friends", async (req, res) => {
   const userId = parseInt(req.headers["x-user-id"], 10);
@@ -210,6 +231,7 @@ router.get("/friends/pending", async (req, res) => {
 });
 
 // GET /friends/status/:targetId — relationship status between me and another user
+// Returns: none | pending_sent | pending_received | accepted | blocked | blocked_by
 router.get("/friends/status/:targetId", async (req, res) => {
   const userId = parseInt(req.headers["x-user-id"], 10);
   const targetId = parseInt(req.params.targetId, 10);
@@ -225,11 +247,66 @@ router.get("/friends/status/:targetId", async (req, res) => {
     if (result.rows.length === 0) return res.json({ status: "none" });
 
     const row = result.rows[0];
-    // If pending and I sent it → "pending_sent", if they sent it → "pending_received"
+
+    if (row.status === "blocked") {
+      // Directional: who put the block in place?
+      return res.json({ status: row.user_id === userId ? "blocked" : "blocked_by" });
+    }
+
     if (row.status === "pending")
       return res.json({ status: row.user_id === userId ? "pending_sent" : "pending_received" });
 
     res.json({ status: row.status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST /users/block/:targetId — block a user
+// Removes any existing friendship/pending request, then inserts a block record.
+router.post("/users/block/:targetId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const targetId = parseInt(req.params.targetId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (userId === targetId) return res.status(400).json({ error: "Cannot block yourself" });
+
+  try {
+    // Remove any existing relationship in both directions before inserting the block
+    await pool.query(
+      `DELETE FROM auth.friendships
+       WHERE (user_id = $1 AND friend_id = $2)
+          OR (user_id = $2 AND friend_id = $1)`,
+      [userId, targetId]
+    );
+
+    // Insert directional block: userId → targetId
+    await pool.query(
+      `INSERT INTO auth.friendships (user_id, friend_id, status)
+       VALUES ($1, $2, 'blocked')`,
+      [userId, targetId]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// DELETE /users/block/:targetId — unblock a user
+router.delete("/users/block/:targetId", async (req, res) => {
+  const userId = parseInt(req.headers["x-user-id"], 10);
+  const targetId = parseInt(req.params.targetId, 10);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    await pool.query(
+      `DELETE FROM auth.friendships
+       WHERE user_id = $1 AND friend_id = $2 AND status = 'blocked'`,
+      [userId, targetId]
+    );
+    res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });

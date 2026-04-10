@@ -52,12 +52,14 @@ export default function SearchView({
             {searchResults.users.map((user) => (
               <div key={user.id} className="flex items-center justify-between p-2 border border-cyan-500/10 bg-cyan-950/20 rounded">
                 <span className="text-[11px] text-cyan-50 font-mono">{user.username}</span>
-                <button
-                  onClick={() => onStartDM(user.id)}
-                  className="text-[9px] uppercase tracking-widest text-cyan-400 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-400 px-2 py-0.5 rounded transition-all"
-                >
-                  DM
-                </button>
+                {!user.cannotDM && (
+                  <button
+                    onClick={() => onStartDM(user.id)}
+                    className="text-[9px] uppercase tracking-widest text-cyan-400 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-400 px-2 py-0.5 rounded transition-all"
+                  >
+                    DM
+                  </button>
+                )}
               </div>
             ))}
           </div>

@@ -59,6 +59,11 @@ router.get("/users/by-username/:username", authMiddleware, async (req, res) => {
   }
 });
 
+// BLOCK ENDPOINTS — must be defined before /users/:id to avoid Express catching "blocked" as an id
+router.get("/users/blocked",            authMiddleware, (req, res) => friendsProxy(req, res, "/users/blocked"));
+router.post("/users/block/:targetId",   authMiddleware, (req, res) => friendsProxy(req, res, `/users/block/${req.params.targetId}`, "POST"));
+router.delete("/users/block/:targetId", authMiddleware, (req, res) => friendsProxy(req, res, `/users/block/${req.params.targetId}`, "DELETE"));
+
 // GET ANY USER PROFILE: Fetch any user's public data by ID
 router.get("/users/:id", authMiddleware, async (req, res) => {
   try {
@@ -128,5 +133,6 @@ router.post("/friends/request/:targetId",   authMiddleware, (req, res) => friend
 router.post("/friends/accept/:requesterId", authMiddleware, (req, res) => friendsProxy(req, res, `/friends/accept/${req.params.requesterId}`, "POST"));
 router.post("/friends/decline/:requesterId",authMiddleware, (req, res) => friendsProxy(req, res, `/friends/decline/${req.params.requesterId}`, "POST"));
 router.delete("/friends/:friendId",         authMiddleware, (req, res) => friendsProxy(req, res, `/friends/${req.params.friendId}`, "DELETE"));
+
 
 export default router;

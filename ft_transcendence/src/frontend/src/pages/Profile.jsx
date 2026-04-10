@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus } from "lucide-react";
+import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser, searchUsers } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest } from "../api/friends";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getFriendStatus, getBlockedUsers, unblockUser } from "../api/friends";
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
@@ -27,6 +27,7 @@ export default function ProfilePage() {
   const [socialSearch, setSocialSearch] = useState("");
   const [socialResults, setSocialResults] = useState({ users: [], channels: [] });
   const [socialActions, setSocialActions] = useState({}); // tracks per-id action state: "pending" | "done"
+  const [blocked, setBlocked] = useState([]); // users I have blocked
   const socialSearchTimer = useRef(null);
 
   useEffect(() => {
@@ -49,13 +50,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (tab !== "Social") return;
-    Promise.all([getFriends(), getPendingRequests(), getConversations()])
-      .then(([f, p, convs]) => {
-        setFriends(f);
-        setPending(p);
-        setChannels(convs.filter((c) => c.type === "channel" && c.name?.toLowerCase() !== "arena_general"));
-      })
-      .catch(() => {});
+    // Use individual catches so one failing endpoint doesn't wipe all sections
+    Promise.all([
+      getFriends().catch(() => []),
+      getPendingRequests().catch(() => []),
+      getConversations().catch(() => []),
+      getBlockedUsers().catch(() => []),
+    ]).then(([f, p, convs, bl]) => {
+      setFriends(f);
+      setPending(p);
+      setChannels(convs.filter((c) => c.type === "channel" && c.name?.toLowerCase() !== "arena_general"));
+      setBlocked(bl);
+    });
   }, [tab]);
 
   const handleAccept = async (requesterId) => {
@@ -85,7 +91,21 @@ export default function ProfilePage() {
         searchUsers(q).catch(() => []),
         searchChannels(q).catch(() => []),
       ]);
-      setSocialResults({ users, channels });
+
+      // Enrich each user result with their relationship status so the UI
+      // can show the correct button (Add / Pending / Friends / Blocked / Unavailable)
+      const enriched = await Promise.all(
+        users.map(async (u) => {
+          try {
+            const { status } = await getFriendStatus(u.id);
+            return { ...u, friendStatus: status };
+          } catch {
+            return { ...u, friendStatus: "none" };
+          }
+        })
+      );
+
+      setSocialResults({ users: enriched, channels });
     }, 300);
   };
 
@@ -197,18 +217,33 @@ export default function ProfilePage() {
                       <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Users</p>
                       <div className="space-y-2">
                         {socialResults.users.map((u) => {
-                          const action = socialActions[`user-${u.id}`];
+                          // In-session override (after sending a request this search session)
+                          const sessionSent = socialActions[`user-${u.id}`] === "done";
+                          const fs = sessionSent ? "pending_sent" : (u.friendStatus ?? "none");
                           return (
                             <div key={u.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
                               <button onClick={() => navigate(`/profile/${u.username}`)} className="text-sm text-cyan-50 hover:text-cyan-300 transition-colors">
                                 {u.username}
                               </button>
                               <div className="flex gap-2">
-                                {action === "done" ? (
-                                  <span className="text-[9px] uppercase tracking-widest text-green-400">Sent</span>
-                                ) : (
+                                {/* Friend action button — varies by relationship status */}
+                                {fs === "accepted" && (
+                                  <span className="text-[9px] uppercase tracking-widest text-green-400/70">Friends</span>
+                                )}
+                                {fs === "pending_sent" && (
+                                  <span className="text-[9px] uppercase tracking-widest text-yellow-400/70">Pending</span>
+                                )}
+                                {fs === "pending_received" && (
+                                  <span className="text-[9px] uppercase tracking-widest text-cyan-400/70">Requested you</span>
+                                )}
+                                {(fs === "blocked" || fs === "blocked_by") && (
+                                  <span className="text-[9px] uppercase tracking-widest text-red-400/50">
+                                    {fs === "blocked" ? "Blocked" : "Unavailable"}
+                                  </span>
+                                )}
+                                {fs === "none" && (
                                   <button
-                                    disabled={action === "pending"}
+                                    disabled={socialActions[`user-${u.id}`] === "pending"}
                                     onClick={async () => {
                                       setSocialActions((prev) => ({ ...prev, [`user-${u.id}`]: "pending" }));
                                       await sendFriendRequest(u.id).catch(() => {});
@@ -219,9 +254,12 @@ export default function ProfilePage() {
                                     <UserPlus size={11} /> Add
                                   </button>
                                 )}
-                                <button onClick={() => navigate(`/?dm=${u.id}`)} className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors">
-                                  <MessageSquare size={11} /> DM
-                                </button>
+                                {/* DM button — only if no block in either direction */}
+                                {fs !== "blocked" && fs !== "blocked_by" && (
+                                  <button onClick={() => navigate(`/?dm=${u.id}`)} className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors">
+                                    <MessageSquare size={11} /> DM
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
@@ -325,6 +363,29 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </>
+              )}
+
+              {/* Blocked users */}
+              {blocked.length > 0 && (
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-red-500/50 mb-2">Blocked</p>
+                  <div className="space-y-2">
+                    {blocked.map((u) => (
+                      <div key={u.id} className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-950/10 px-4 py-2">
+                        <span className="text-sm text-cyan-50/60 font-mono">{u.username}</span>
+                        <button
+                          onClick={async () => {
+                            await unblockUser(u.id).catch(() => {});
+                            setBlocked((prev) => prev.filter((b) => b.id !== u.id));
+                          }}
+                          className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                        >
+                          <ShieldCheck size={11} /> Unblock
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Channels */}

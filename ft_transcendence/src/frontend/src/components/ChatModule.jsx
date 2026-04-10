@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 // API & Hooks
 import { getConversations, getMessages, createConversation, searchChannels, joinChannel, leaveChannel } from "../api/chat";
 import { searchUsers } from "../api/users";
+import { getFriendStatus } from "../api/friends";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -48,6 +49,9 @@ export default function ChatModule() {
 
   const [pendingDmUserId, setPendingDmUserId] = useState(null);
   const [pendingChannelId, setPendingChannelId] = useState(null);
+
+  // True when the active DM has a block in either direction (I blocked them or they blocked me)
+  const [dmIsBlocked, setDmIsBlocked] = useState(false);
 
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -154,6 +158,21 @@ export default function ChatModule() {
     getMessages(activeConversationId).then(setMessages).catch(console.error);
   }, [activeConversationId]);
 
+  // ── Check block status when opening a DM ─────────────────────────────────
+  useEffect(() => {
+    if (!activeConversationId) { setDmIsBlocked(false); return; }
+
+    const conv = conversations.find(c => c.id === activeConversationId);
+    if (!conv || conv.type !== "private") { setDmIsBlocked(false); return; }
+
+    const otherId = conv.participants?.[0]?.id;
+    if (!otherId) { setDmIsBlocked(false); return; }
+
+    getFriendStatus(otherId)
+      .then(({ status }) => setDmIsBlocked(status === "blocked" || status === "blocked_by"))
+      .catch(() => setDmIsBlocked(false));
+  }, [activeConversationId]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const openConversation = (convId) => {
     setActiveConversationId(convId);
@@ -211,7 +230,21 @@ export default function ChatModule() {
           searchUsers(q).catch(() => []),
           searchChannels(q).catch(() => []),
         ]);
-        setSearchResults({ users: users.filter(u => String(u.id) !== String(myId)), channels });
+
+        // Filter out the current user, then check block status for each result
+        const filteredUsers = users.filter(u => String(u.id) !== String(myId));
+        const usersWithBlockStatus = await Promise.all(
+          filteredUsers.map(async (u) => {
+            try {
+              const { status } = await getFriendStatus(u.id);
+              return { ...u, cannotDM: status === "blocked" || status === "blocked_by" };
+            } catch {
+              return { ...u, cannotDM: false };
+            }
+          })
+        );
+
+        setSearchResults({ users: usersWithBlockStatus, channels });
       } finally {
         setSearchLoading(false);
       }
@@ -250,6 +283,7 @@ export default function ChatModule() {
             typingUsers={typingUsers}
             myId={myId}
             input={input}
+            isBlocked={dmIsBlocked}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
             onBack={() => setView("inbox")}

@@ -7,3 +7,6 @@ export const sendFriendRequest = (targetId) => apiFetch(`/friends/request/${targ
 export const acceptFriendRequest = (requesterId) => apiFetch(`/friends/accept/${requesterId}`, { method: "POST" });
 export const declineFriendRequest = (requesterId) => apiFetch(`/friends/decline/${requesterId}`, { method: "POST" });
 export const removeFriend = (friendId) => apiFetch(`/friends/${friendId}`, { method: "DELETE" });
+export const getBlockedUsers = () => apiFetch("/users/blocked");
+export const blockUser       = (targetId) => apiFetch(`/users/block/${targetId}`, { method: "POST" });
+export const unblockUser     = (targetId) => apiFetch(`/users/block/${targetId}`, { method: "DELETE" });
