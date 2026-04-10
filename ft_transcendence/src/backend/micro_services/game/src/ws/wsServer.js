@@ -1,25 +1,48 @@
 import { getMatch, getAllMatches, deleteMatch } from "../engine/matchStore.js";
 import { stepSimulation, queuePlayerDirection } from "../engine/engine.js";
+import jwt from "jsonwebtoken";
+
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
+
+export function verifyAccessToken(token) {
+  return jwt.verify(token, ACCESS_SECRET);
+}
 
 export function initSocket(io) {
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    
+    if (!token) {
+      return next(new Error("unauthorized"));
+    }
 
+    try {
+      const payload = verifyAccessToken(token); 
+      
+      socket.data.userId = payload.id; 
+      next();
+    } catch (err) {
+      next(new Error("unauthorized"));
+    }
+  });
   io.on("connection", (socket) => {
-
-    socket.on("join_match", ({ matchId, playerId }) => {
+    console.log("GAME SOCKET CONNECTED");
+    socket.on("join_match", ({ matchId }) => {
       const state = getMatch(matchId);
-      if (!state) return;
+      if (!state)
+         return;
 
-      if (state.mode !== "pvp") return;
-
-      const player = state.players.find(p => p.id === playerId);
-      if (!player) return;
+      const player = state.players.find(
+        p => p.userId === socket.data.userId
+      );
+      if (!player)
+         return;
 
       socket.join(matchId);
 
       socket.data.matchId = matchId;
-      socket.data.playerId = playerId;
+      socket.data.playerId = player.id;
 
-      // Enviar estado inicial
       socket.emit("state_update", state);
     });
 
@@ -27,8 +50,10 @@ export function initSocket(io) {
       const { matchId, playerId } = socket.data;
       const state = getMatch(matchId);
 
-      if (!state) return;
-      if (state.status !== "playing") return;
+      if (!state)
+        return;
+      if (state.status !== "playing")
+        return;
 
       queuePlayerDirection(state, playerId, direction);
     });
@@ -36,12 +61,19 @@ export function initSocket(io) {
     socket.on("disconnect", () => {
       const { matchId, playerId } = socket.data;
       const state = getMatch(matchId);
-      if (!state) return;
+      if (!state)
+        return;
 
-      const player = state.players.find(p => p.id === playerId);
-      if (player) player.connected = false;
+      const player = state.players.find(
+        p => p.userId === socket.data.userId
+      );
+      if (player)
+        player.connected = false;
 
-      state.status = "waiting";
+      const anyConnected = state.players.some(p => p.connected);
+      if (!anyConnected) {
+        state.status = "waiting";
+      }
     });
   });
 
@@ -51,14 +83,15 @@ export function initSocket(io) {
 
     Object.entries(matches).forEach(([matchId, state]) => {
 
-      if (state.mode !== "pvp") return;
-      if (state.status !== "playing") return;
+      if (state.mode !== "pvp")
+        return;
+      if (state.status !== "playing")
+        return;
 
       stepSimulation(state);
 
       io.to(matchId).emit("state_update", state);
 
-      // Limpieza simple
       if (state.matchOver) {
         deleteMatch(matchId);
       }

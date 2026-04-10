@@ -19,7 +19,8 @@ export function useTronBackendMatch() {
   }, []);
 
   useEffect(() => {
-    if (!matchId || !config || state?.roundOver || state?.matchOver) return;
+    if (!matchId || !config || state?.roundOver || state?.matchOver)
+      return;
 
     const interval = setInterval(async () => {
       const res = await moveGameMatch(matchId, {});
@@ -30,7 +31,8 @@ export function useTronBackendMatch() {
   }, [matchId, config, state?.roundOver, state?.matchOver]);
 
   useEffect(() => {
-    if (!state?.roundOver || state?.matchOver) return;
+    if (!state?.roundOver || state?.matchOver)
+      return;
 
     const timeout = setTimeout(async () => {
       const res = await resetRoundGameMatch(matchId);
@@ -45,7 +47,8 @@ export function useTronBackendMatch() {
   };
 
   const sendMove = async (playerId, direction) => {
-    if (!matchId || state?.roundOver) return;
+    if (!matchId || state?.roundOver)
+      return;
     const res = await moveGameMatch(matchId, { playerId, direction });
     syncState(res);
   };
