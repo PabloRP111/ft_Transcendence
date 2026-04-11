@@ -120,19 +120,36 @@ router.get('/:conversationId/messages', async (req: Request, res: Response): Pro
       rows = result.rows.reverse();
     }
 
-    res.json(
-      rows.map((msg) => ({
+    // For DMs, also fetch the other participant's last_read_at so the frontend
+    // can show the "Read" receipt under the sender's last message.
+    let otherReadAt: string | null = null;
+    const convTypeResult = await pool.query<{ type: string }>(
+      `SELECT type FROM chat.conversations WHERE id = $1`,
+      [conversationId],
+    );
+    if (convTypeResult.rows[0]?.type === 'private') {
+      const readResult = await pool.query<{ last_read_at: string | null }>(
+        `SELECT last_read_at
+         FROM chat.conversation_participants
+         WHERE conversation_id = $1 AND user_id != $2
+         LIMIT 1`,
+        [conversationId, userId],
+      );
+      otherReadAt = readResult.rows[0]?.last_read_at ?? null;
+    }
+
+    res.json({
+      messages: rows.map((msg) => ({
         id: msg.id,
         conversationId: msg.conversation_id,
         senderId: msg.sender_id,
         content: msg.content,
         createdAt: msg.created_at,
         editedAt: msg.edited_at,
-        sender: {
-          username: msg.username
-        }
+        sender: { username: msg.username },
       })),
-    );
+      otherReadAt,
+    });
   } catch (err) {
     console.error('[GET /messages] error:', err);
     res.status(500).json({ error: 'internal server error' });

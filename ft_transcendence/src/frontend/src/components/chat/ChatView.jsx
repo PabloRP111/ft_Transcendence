@@ -13,6 +13,7 @@ export default function ChatView({
   input,
   isBlocked,
   dmFriendStatus,
+  otherReadAt,
   onAddFriend,
   onTyping,
   onSendMessage,
@@ -29,6 +30,11 @@ export default function ChatView({
   const isOtherOnline = isDM && activeConversation?.participants?.some(
     (p) => onlineUsers.has(String(p.id))
   );
+
+  // ID of the last message I sent — used to show the "Read" receipt under it
+  const lastSentMessageId = isDM
+    ? [...messages].reverse().find((m) => String(m.senderId) === String(myId))?.id
+    : null;
 
   return (
     <motion.div
@@ -130,6 +136,10 @@ export default function ChatView({
                 {msg.content}
               </div>
               <span className="text-[7px] text-cyan-100/20 mt-1 px-1 font-mono">{time}</span>
+              {/* Read receipt — only on the last message I sent, only in DMs */}
+              {isMe && msg.id === lastSentMessageId && otherReadAt && new Date(otherReadAt) >= new Date(msg.createdAt) && (
+                <span className="text-[7px] text-cyan-400/40 px-1 font-mono">Read</span>
+              )}
             </div>
           );
         })}

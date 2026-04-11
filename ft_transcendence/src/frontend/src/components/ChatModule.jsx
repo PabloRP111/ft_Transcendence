@@ -54,6 +54,8 @@ export default function ChatModule() {
   const [dmIsBlocked, setDmIsBlocked] = useState(false);
   // Friend status with the other DM participant: none | pending_sent | pending_received | accepted | blocked | blocked_by
   const [dmFriendStatus, setDmFriendStatus] = useState("none");
+  // Timestamp the OTHER participant last read this DM (null for channels or unread)
+  const [otherReadAt, setOtherReadAt] = useState(null);
 
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -74,6 +76,14 @@ export default function ChatModule() {
         setMessages((prev) => [...prev, msg]);
       } else {
         setUnreadIds((prev) => new Set(prev).add(msg.conversationId));
+      }
+    },
+    // Update otherReadAt when the other participant reads the conversation
+    onMessageRead: ({ conversationId, userId, readAt }) => {
+      const myId = getMyIdFromToken();
+      if (String(userId) === String(myId)) return; // ignore my own read events
+      if (String(conversationId) === String(activeConversationId)) {
+        setOtherReadAt(readAt);
       }
     },
     onTypingStart: ({ userId }) => setTypingUsers((prev) => new Set(prev).add(userId)),
@@ -154,10 +164,18 @@ export default function ChatModule() {
     openConversation(Number(channelId));
   }, [pendingChannelId, conversations.length]);
 
-  // ── Load History ──────────────────────────────────────────────────────────
+  // ── Load History + emit markRead ─────────────────────────────────────────
   useEffect(() => {
     if (!activeConversationId) return;
-    getMessages(activeConversationId).then(setMessages).catch(console.error);
+
+    getMessages(activeConversationId)
+      .then(({ messages, otherReadAt: readAt }) => {
+        setMessages(messages);
+        setOtherReadAt(readAt);
+        // Tell the server (and the other participant) that we've read this conversation
+        socketRef.current?.emit("markRead", { conversationId: String(activeConversationId) });
+      })
+      .catch(console.error);
   }, [activeConversationId]);
 
   // ── Check friend/block status when opening a DM ──────────────────────────
@@ -290,6 +308,7 @@ export default function ChatModule() {
             input={input}
             isBlocked={dmIsBlocked}
             dmFriendStatus={dmFriendStatus}
+            otherReadAt={otherReadAt}
             onAddFriend={async () => {
               const otherId = activeConversation?.participants?.[0]?.id;
               if (!otherId) return;

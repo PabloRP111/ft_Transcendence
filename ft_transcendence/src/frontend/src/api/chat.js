@@ -19,14 +19,18 @@ export async function getConversations() {
 
 /**
  * Fetch message history for a conversation, from oldest to newest.
- * Supports pagination via 'limit', 'before' (timestamp), and 'beforeId'.
+ * Returns { messages: [...], otherReadAt: string|null }
+ * otherReadAt is only populated for DMs — the timestamp the other participant last read.
  */
 export async function getMessages(conversationId, { limit = 50, before, beforeId } = {}) {
   const params = new URLSearchParams({ limit });
   if (before) params.set("before", before);
   if (beforeId) params.set("beforeId", beforeId);
 
-  return apiFetch(`/chat/conversations/${conversationId}/messages?${params.toString()}`);
+  const data = await apiFetch(`/chat/conversations/${conversationId}/messages?${params.toString()}`);
+  // Normalize: channels return the old array shape, DMs return { messages, otherReadAt }
+  if (Array.isArray(data)) return { messages: data, otherReadAt: null };
+  return data;
 }
 
 /**
