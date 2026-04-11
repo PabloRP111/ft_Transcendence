@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 // API & Hooks
 import { getConversations, getMessages, createConversation, searchChannels, joinChannel, leaveChannel } from "../api/chat";
 import { searchUsers } from "../api/users";
-import { getFriendStatus } from "../api/friends";
+import { getFriendStatus, sendFriendRequest } from "../api/friends";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -52,6 +52,8 @@ export default function ChatModule() {
 
   // True when the active DM has a block in either direction (I blocked them or they blocked me)
   const [dmIsBlocked, setDmIsBlocked] = useState(false);
+  // Friend status with the other DM participant: none | pending_sent | pending_received | accepted | blocked | blocked_by
+  const [dmFriendStatus, setDmFriendStatus] = useState("none");
 
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -158,19 +160,22 @@ export default function ChatModule() {
     getMessages(activeConversationId).then(setMessages).catch(console.error);
   }, [activeConversationId]);
 
-  // ── Check block status when opening a DM ─────────────────────────────────
+  // ── Check friend/block status when opening a DM ──────────────────────────
   useEffect(() => {
-    if (!activeConversationId) { setDmIsBlocked(false); return; }
+    if (!activeConversationId) { setDmIsBlocked(false); setDmFriendStatus("none"); return; }
 
     const conv = conversations.find(c => c.id === activeConversationId);
-    if (!conv || conv.type !== "private") { setDmIsBlocked(false); return; }
+    if (!conv || conv.type !== "private") { setDmIsBlocked(false); setDmFriendStatus("none"); return; }
 
     const otherId = conv.participants?.[0]?.id;
-    if (!otherId) { setDmIsBlocked(false); return; }
+    if (!otherId) { setDmIsBlocked(false); setDmFriendStatus("none"); return; }
 
     getFriendStatus(otherId)
-      .then(({ status }) => setDmIsBlocked(status === "blocked" || status === "blocked_by"))
-      .catch(() => setDmIsBlocked(false));
+      .then(({ status }) => {
+        setDmIsBlocked(status === "blocked" || status === "blocked_by");
+        setDmFriendStatus(status);
+      })
+      .catch(() => { setDmIsBlocked(false); setDmFriendStatus("none"); });
   }, [activeConversationId]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -284,6 +289,13 @@ export default function ChatModule() {
             myId={myId}
             input={input}
             isBlocked={dmIsBlocked}
+            dmFriendStatus={dmFriendStatus}
+            onAddFriend={async () => {
+              const otherId = activeConversation?.participants?.[0]?.id;
+              if (!otherId) return;
+              await sendFriendRequest(otherId).catch(() => {});
+              setDmFriendStatus("pending_sent");
+            }}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
             onBack={() => setView("inbox")}
