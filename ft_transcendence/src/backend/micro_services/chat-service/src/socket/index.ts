@@ -23,6 +23,7 @@ interface ClientToServerEvents {
   ) => void;
   leaveConversation: (payload: { conversationId: string }) => void;
   sendMessage: (payload: { conversationId: string; content: string }) => void;
+  markRead: (payload: { conversationId: string }) => void;
   typingStart: (payload: { conversationId: string }) => void;
   typingStop: (payload: { conversationId: string }) => void;
 }
@@ -31,6 +32,7 @@ interface ServerToClientEvents {
   newMessage: (msg: any) => void;
   messageFailed: (err: any) => void;
   rateLimitExceeded: (data: any) => void;
+  messageRead: (data: { conversationId: string; userId: string; readAt: string }) => void;
   typingStart: (data: any) => void;
   typingStop: (data: any) => void;
   userOnline: (data: { userId: string }) => void;
@@ -200,6 +202,36 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       } catch (err) {
         console.error('[socket] sendMessage error:', err);
         socket.emit('messageFailed', { conversationId, error: 'db error' });
+      }
+    });
+
+    // Mark conversation as read: updates last_read_at for this user and notifies
+    // the other participant in real time so they can show the "Read" indicator.
+    socket.on('markRead', async ({ conversationId }) => {
+      if (!hasStringField({ conversationId }, 'conversationId')) return;
+      try {
+        const allowed = await isParticipant(conversationId, userIdInt);
+        if (!allowed) return;
+
+        const result = await pool.query<{ last_read_at: string }>(
+          `UPDATE chat.conversation_participants
+           SET last_read_at = NOW()
+           WHERE conversation_id = $1 AND user_id = $2
+           RETURNING last_read_at`,
+          [conversationId, userIdInt],
+        );
+
+        const readAt = result.rows[0]?.last_read_at;
+        if (!readAt) return;
+
+        // Notify everyone in the room (the sender will use this to show "Read")
+        chat.to(conversationId).emit('messageRead', {
+          conversationId,
+          userId,
+          readAt,
+        });
+      } catch (err) {
+        console.error('[socket] markRead error:', err);
       }
     });
 

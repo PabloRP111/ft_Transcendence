@@ -13,6 +13,7 @@ export function useChat(
   {
     onNewMessage,
     onMessageFailed,
+    onMessageRead,
     onTypingStart,
     onTypingStop,
     onUserOnline,
@@ -23,9 +24,9 @@ export function useChat(
 
   // 1. Sync refs to keep callbacks fresh without re-triggering useEffect
   const refs = useRef({});
-  refs.current = { 
-    onNewMessage, onMessageFailed, onTypingStart, 
-    onTypingStop, onUserOnline, onUserOffline 
+  refs.current = {
+    onNewMessage, onMessageFailed, onMessageRead,
+    onTypingStart, onTypingStop, onUserOnline, onUserOffline
   };
 
   // 2. Register Global Chat Listeners
@@ -37,6 +38,7 @@ export function useChat(
       // Event listeners use the ref to always call the latest function version
       socket.on("newMessage", (msg) => refs.current.onNewMessage?.(msg));
       socket.on("messageFailed", (err) => refs.current.onMessageFailed?.(err));
+      socket.on("messageRead", (data) => refs.current.onMessageRead?.(data));
       socket.on("typingStart", (data) => refs.current.onTypingStart?.(data));
       socket.on("typingStop", (data) => refs.current.onTypingStop?.(data));
       socket.on("userOnline", (data) => refs.current.onUserOnline?.(data));
@@ -51,6 +53,7 @@ export function useChat(
       socket.off("connect", registerListeners);
       socket.off("newMessage");
       socket.off("messageFailed");
+      socket.off("messageRead");
       socket.off("typingStart");
       socket.off("typingStop");
       socket.off("userOnline");

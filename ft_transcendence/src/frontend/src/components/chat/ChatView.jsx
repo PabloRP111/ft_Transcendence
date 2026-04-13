@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { Send, ArrowLeft, LogOut } from "lucide-react";
+import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
@@ -12,6 +12,9 @@ export default function ChatView({
   myId,
   input,
   isBlocked,
+  dmFriendStatus,
+  otherReadAt,
+  onAddFriend,
   onTyping,
   onSendMessage,
   onBack,
@@ -27,6 +30,11 @@ export default function ChatView({
   const isOtherOnline = isDM && activeConversation?.participants?.some(
     (p) => onlineUsers.has(String(p.id))
   );
+
+  // ID of the last message I sent — used to show the "Read" receipt under it
+  const lastSentMessageId = isDM
+    ? [...messages].reverse().find((m) => String(m.senderId) === String(myId))?.id
+    : null;
 
   return (
     <motion.div
@@ -61,10 +69,28 @@ export default function ChatView({
             </span>
           )}
           {isDM && (
-            <span className={`text-[8px] font-mono flex items-center gap-1 ${isOtherOnline ? "text-green-400" : "text-cyan-100/30"}`}>
-              <span className={`w-1 h-1 rounded-full inline-block ${isOtherOnline ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" : "bg-gray-600"}`} />
-              {isOtherOnline ? "online" : "offline"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`text-[8px] font-mono flex items-center gap-1 ${isOtherOnline ? "text-green-400" : "text-cyan-100/30"}`}>
+                <span className={`w-1 h-1 rounded-full inline-block ${isOtherOnline ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" : "bg-gray-600"}`} />
+                {isOtherOnline ? "online" : "offline"}
+              </span>
+              {/* Friend status indicator — only shown for DMs without a block */}
+              {!isBlocked && dmFriendStatus === "none" && (
+                <button onClick={onAddFriend} className="flex items-center gap-0.5 text-[8px] text-cyan-400/50 hover:text-cyan-300 transition-colors" title="Add friend">
+                  <UserPlus size={10} />
+                </button>
+              )}
+              {!isBlocked && dmFriendStatus === "pending_sent" && (
+                <span className="flex items-center gap-0.5 text-[8px] text-yellow-400/50" title="Friend request sent">
+                  <Clock size={10} />
+                </span>
+              )}
+              {!isBlocked && dmFriendStatus === "accepted" && (
+                <span className="flex items-center gap-0.5 text-[8px] text-green-400/40" title="Friends">
+                  <UserCheck size={10} />
+                </span>
+              )}
+            </div>
           )}
         </div>
         {isLeavable && (
@@ -110,6 +136,10 @@ export default function ChatView({
                 {msg.content}
               </div>
               <span className="text-[7px] text-cyan-100/20 mt-1 px-1 font-mono">{time}</span>
+              {/* Read receipt — only on the last message I sent, only in DMs */}
+              {isMe && msg.id === lastSentMessageId && otherReadAt && new Date(otherReadAt) >= new Date(msg.createdAt) && (
+                <span className="text-[7px] text-cyan-400/40 px-1 font-mono">Read</span>
+              )}
             </div>
           );
         })}
