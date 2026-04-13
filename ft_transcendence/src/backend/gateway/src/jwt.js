@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { pool } from "./db.js";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOS is overrated";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
 // token corto (login normal)

@@ -2,73 +2,89 @@ import { getMatch, getAllMatches, deleteMatch } from "../engine/matchStore.js";
 import { stepSimulation, queuePlayerDirection } from "../engine/engine.js";
 import jwt from "jsonwebtoken";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "supersecret2";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOS is overrated";
 
 export function verifyAccessToken(token) {
   return jwt.verify(token, ACCESS_SECRET);
 }
 
 export function initSocket(io) {
-  io.use((socket, next) => {
+  const game = io.of("/game");
+
+  game.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    
+
     if (!token) {
       return next(new Error("unauthorized"));
     }
 
     try {
-      const payload = verifyAccessToken(token); 
-      
-      socket.data.userId = payload.id; 
+      const payload = verifyAccessToken(token);
+      socket.data.userId = String(payload.id);
       next();
-    } catch (err) {
+    } catch {
       next(new Error("unauthorized"));
     }
   });
-  io.on("connection", (socket) => {
+
+  game.on("connection", (socket) => {
     console.log("GAME SOCKET CONNECTED");
+
     socket.on("join_match", ({ matchId }) => {
       const state = getMatch(matchId);
-      if (!state)
-         return;
+      if (!state) return;
 
-      const player = state.players.find(
-        p => p.userId === socket.data.userId
-      );
-      if (!player)
-         return;
+      const player =
+        state.players.find(p => p.userId === socket.data.userId) ||
+        state.players.find(p => !p.userId);
+
+      if (!player) return;
+
+      player.userId = socket.data.userId;
+      player.connected = true;
 
       socket.join(matchId);
 
       socket.data.matchId = matchId;
       socket.data.playerId = player.id;
 
-      socket.emit("state_update", state);
+      const allConnected = state.players.every(p => p.connected);
+      if (allConnected) {
+        state.status = "playing";
+      }
+
+      setTimeout(() => {
+        game.to(matchId).emit("state_update", state);
+      }, 50);
     });
 
     socket.on("move", ({ direction }) => {
       const { matchId, playerId } = socket.data;
       const state = getMatch(matchId);
 
-      if (!state)
-        return;
-      if (state.status !== "playing")
-        return;
+      if (!state) return;
+      if (state.status !== "playing") return;
 
       queuePlayerDirection(state, playerId, direction);
     });
 
-    socket.on("disconnect", () => {
-      const { matchId, playerId } = socket.data;
-      const state = getMatch(matchId);
-      if (!state)
-        return;
+    socket.on("connect_error", (err) => {
+      console.error("SOCKET ERROR:", err.message);
+    });
 
-      const player = state.players.find(
-        p => p.userId === socket.data.userId
-      );
-      if (player)
-        player.connected = false;
+    socket.on("disconnect", () => {
+      const { matchId } = socket.data;
+      const state = getMatch(matchId);
+      if (!state) return;
+
+      const player =
+        state.players.find(p => p.userId === socket.data.userId) ||
+        state.players.find(p => !p.userId);
+
+      if (!player) return;
+
+      player.userId = socket.data.userId;
+      player.connected = true;
 
       const anyConnected = state.players.some(p => p.connected);
       if (!anyConnected) {
@@ -77,20 +93,17 @@ export function initSocket(io) {
     });
   });
 
-  // GAME LOOP GLOBAL PVP
   setInterval(() => {
     const matches = getAllMatches();
 
     Object.entries(matches).forEach(([matchId, state]) => {
 
-      if (state.mode !== "pvp")
-        return;
-      if (state.status !== "playing")
-        return;
+      if (state.mode !== "pvp") return;
+      if (state.status !== "playing") return;
 
       stepSimulation(state);
 
-      io.to(matchId).emit("state_update", state);
+      game.to(matchId).emit("state_update", state);
 
       if (state.matchOver) {
         deleteMatch(matchId);

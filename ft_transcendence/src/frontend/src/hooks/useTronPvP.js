@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { joinPvpMatch } from "../api/game";
+import { useAuth } from "../context/AuthContext";
 
-export function useTronPvP(matchId, token) {
+export function useTronPvP(matchId) {
+  const { accessToken } = useAuth();
   const [state, setState] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [playerId, setPlayerId] = useState(null);
@@ -10,7 +12,7 @@ export function useTronPvP(matchId, token) {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    if (!matchId) return;
+    if (!matchId || !accessToken) return;
 
     let mounted = true;
 
@@ -21,26 +23,43 @@ export function useTronPvP(matchId, token) {
 
         setPlayerId(res.playerId);
 
-        const socket = io(window.location.origin, {
+        if (socketRef.current) {
+          socketRef.current.disconnect();
+        }
+
+        const socket = io(`${window.location.origin}/game`, {
           path: "/socket.io/game",
           transports: ["websocket"],
-          auth: { token }
+          auth: { token: accessToken },
         });
 
         socket.on("connect", () => {
           setIsConnected(true);
+          console.log("CONNECTED", socket.id);
 
-          socket.emit("join_match", {
-            matchId,
-          });
+          socket.emit("join_match", { matchId });
         });
 
         socket.on("state_update", (gameState) => {
+          if (gameState.board instanceof ArrayBuffer) {
+            gameState.board = new Uint8Array(gameState.board);
+          }
+          console.log("BOARD TYPE:", typeof gameState.board);
+          console.log("BOARD:", gameState.board);
+          console.log("STATE:", gameState.status);
+          console.log(
+            "NON ZERO CELLS:",
+            gameState.board.filter(v => v !== 0).length
+          );
           setState(gameState);
         });
 
         socket.on("disconnect", () => {
           setIsConnected(false);
+        });
+
+        socket.on("connect_error", (err) => {
+          console.error("ERROR:", err.message);
         });
 
         socketRef.current = socket;
@@ -54,12 +73,14 @@ export function useTronPvP(matchId, token) {
 
     return () => {
       mounted = false;
+
       if (socketRef.current) {
+        socketRef.current.off();
         socketRef.current.disconnect();
         socketRef.current = null;
       }
     };
-  }, [matchId, token]);
+  }, [matchId, accessToken]);
 
   const sendMove = (direction) => {
     if (!isConnected || state?.status !== "playing") return;
@@ -73,6 +94,13 @@ export function useTronPvP(matchId, token) {
     isPlaying: state?.status === "playing",
     sendMove,
     config: {
+      gridWidth: 100,
+      gridHeight: 72,
+      cellSize: 10,
+      playerColors: {
+        1: "#00f7ff",
+        2: "#ff8c00",
+      },
       playerKeymap: {
         w: "UP", a: "LEFT", s: "DOWN", d: "RIGHT",
         ArrowUp: "UP", ArrowLeft: "LEFT", ArrowDown: "DOWN", ArrowRight: "RIGHT",

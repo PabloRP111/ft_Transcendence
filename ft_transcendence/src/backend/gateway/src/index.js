@@ -21,6 +21,7 @@ const proxy = httpProxy.createProxyServer({
 });
 
 server.on("upgrade", (req, socket, head) => {
+  console.log("UPGRADE REQUEST:", req.url);
   proxy.ws(req, socket, head);
 });
 

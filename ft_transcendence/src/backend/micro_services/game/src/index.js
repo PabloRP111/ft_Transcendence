@@ -18,6 +18,7 @@ app.use("/api/pvp", pvpRoutes);
 const server = http.createServer(app);
 
 const io = new Server(server, {
+  path: "/socket.io",
   cors: {
     origin: ["https://localhost:8443", "http://localhost:5173"],
     methods: ["GET", "POST"],

@@ -61,7 +61,8 @@ function Lives({ lives, maxLives }) {
 export default function TronPvpArena() {
   const [matchId, setMatchId] = useState(null);
   const { config, state, matchResult, sendMove } = useTronPvP(matchId);
-  const socketRef = useRef(null);
+
+  const ready = state?.status === "playing";
 
   // MATCHMAKING
   useEffect(() => {
@@ -77,27 +78,14 @@ export default function TronPvpArena() {
     initMatchmaking();
   }, []);
 
-  // JOIN MATCH
-  useEffect(() => {
-    if (!matchId || !socketRef.current)
-       return;
-
-    socketRef.current.emit("join_match", {
-      matchId,
-    });
-
-  }, [matchId]);
-
   // INPUT
   useEffect(() => {
-    if (!config || !state || state.status !== "playing")
-       return;
+    if (!config || !state || state.status !== "playing") return;
 
     const handleKeyDown = (event) => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
       const nextDirection = config.playerKeymap[key];
-      if (!nextDirection)
-         return;
+      if (!nextDirection) return;
 
       event.preventDefault();
       sendMove(nextDirection);
@@ -107,14 +95,15 @@ export default function TronPvpArena() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [config, state, sendMove]);
 
-  const isLoading = !matchId || !state || state.status !== "playing";
-
+  const isLoading =
+    !matchId ||
+    !state ||
+    state.status !== "playing";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
-      
       <AnimatePresence mode="wait">
-        {isLoading ? (
+        {isLoading || !ready ? (
           <motion.div 
             key="loader"
             exit={{ opacity: 0, scale: 1.1 }}
@@ -163,8 +152,14 @@ export default function TronPvpArena() {
                   animate={{ scale: 1, opacity: 1 }}
                   className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]"
                 >
-                  <TronCanvas engineState={state} config={config} />
-
+                  {!state?.board && (
+                    <div className="text-red-500 text-xl">
+                      NO BOARD DATA
+                    </div>
+                  )}
+                  {state?.board && (
+                    <TronCanvas engineState={state} config={config} />
+                  )}
                   {matchResult && (
                     <motion.div 
                       initial={{ opacity: 0 }} 
@@ -211,4 +206,5 @@ export default function TronPvpArena() {
       </AnimatePresence>
     </div>
   );
+
 }

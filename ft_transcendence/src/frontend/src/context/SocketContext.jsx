@@ -28,7 +28,7 @@ export function SocketProvider({ children }) {
 
     const socket = io(`${window.location.origin}/chat`, {
       path: "/socket.io/chat",
-      transports: ["websocket"],
+      transports: ["websocket", "polling"],
       auth: { token: accessToken },
       autoConnect: true,
     });
