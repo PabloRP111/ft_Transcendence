@@ -4,7 +4,7 @@ import { pool } from "./db.js";
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOS is overrated";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "superrefresh2";
 
-// token corto (login normal)
+// access token (normal login)
 export function generateAccessToken(userId, sessionId) {
   const expMs = Date.now() + 15 * 60 * 1000; // 15 min
 
@@ -19,7 +19,7 @@ export function generateAccessToken(userId, sessionId) {
   return { token, expMs };
 }
 
-// token largo (renovar sesión)
+// refresh largo (renovate session)
 export function generateRefreshToken(userId, username, sessionId) {
   const expMs = Date.now() + 7 * 24 * 60 * 60 * 1000;
 
@@ -37,7 +37,7 @@ export function generateRefreshToken(userId, username, sessionId) {
   return { token, expMs };
 }
 
-// Verificación
+// Verify
 export function verifyAccessToken(token) {
   return jwt.verify(token, ACCESS_SECRET);
 }

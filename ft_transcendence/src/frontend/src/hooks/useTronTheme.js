@@ -8,7 +8,7 @@ export default function useTronTheme() {
     const root = document.documentElement;
     const path = location.pathname;
 
-    // PROFILE (ámbar / naranja)
+    // PROFILE (ambar / orange)
     if (path.startsWith("/profile")) {
 
       root.style.setProperty("--tron-primary", "rgba(255,140,0,0.35)");
@@ -19,7 +19,7 @@ export default function useTronTheme() {
       root.style.setProperty("--tron-text", "#ffd8b0");
       root.style.setProperty("--tron-border", "rgba(255,140,0,0.45)");
     }
-    // GAME (rojo)
+    // GAME (red)
     else if (path.startsWith("/online-game") || path.startsWith("/ai-game")) {
 
       root.style.setProperty("--tron-primary", "rgba(255,60,60,0.35)");
@@ -30,8 +30,7 @@ export default function useTronTheme() {
       root.style.setProperty("--tron-text", "#ffd0d0");
       root.style.setProperty("--tron-border", "rgba(255,60,60,0.45)");
     }
-    // CREDITS (dorado)
-    // CREDITS (oro brillante)
+    // CREDITS (golden)
     else if (path.startsWith("/credits")) {
 
       root.style.setProperty("--tron-primary", "rgba(255,215,90,0.35)");
@@ -42,7 +41,7 @@ export default function useTronTheme() {
       root.style.setProperty("--tron-text", "#fff1c0");
       root.style.setProperty("--tron-border", "rgba(255,215,90,0.45)");
     }
-    // LOGIN && REGISTE (verde)
+    // LOGIN && REGISTE (green)
     else if (path.startsWith("/login") || path.startsWith("/register")) {
 
       root.style.setProperty("--tron-primary", "rgba(0,255,140,0.35)");
@@ -53,7 +52,7 @@ export default function useTronTheme() {
       root.style.setProperty("--tron-text", "#baffd8");
       root.style.setProperty("--tron-border", "rgba(0,255,140,0.45)");
     }
-    // DEFAULT (landing / resto)
+    // DEFAULT (blue)
     else {
 
       root.style.setProperty("--tron-primary", "rgba(0,242,255,0.35)");

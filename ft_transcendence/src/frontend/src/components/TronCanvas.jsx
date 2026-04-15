@@ -10,12 +10,15 @@ function TronCanvas({ engineState, config }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
-    if (!canvas || !context || !engineState) return;
+    if (!canvas || !context || !engineState)
+      return;
 
     let animationFrameId;
 
     const render = () => {
-      if (!engineState) return;
+      if (!engineState || engineState.roundOver)
+        return;
+
       const { board, players } = engineState;
 
       context.clearRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
@@ -41,7 +44,6 @@ function TronCanvas({ engineState, config }) {
           config?.cellSize || 20
         );
       }
-
       animationFrameId = window.requestAnimationFrame(render);
     };
 

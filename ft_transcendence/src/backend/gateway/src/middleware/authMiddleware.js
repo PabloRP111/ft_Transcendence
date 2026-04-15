@@ -23,7 +23,7 @@ export default async function authMiddleware(req, res, next) {
   if (!session)
     return res.status(401).json({ error: "No session" });
 
-  // Validación de sesión activa
+  // Active session validation
   if (payload.session_id !== session.session_id)
     return res.status(401).json({ error: "Invalid session" });
 

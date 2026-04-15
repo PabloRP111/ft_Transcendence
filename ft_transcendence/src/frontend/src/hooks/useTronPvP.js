@@ -41,16 +41,8 @@ export function useTronPvP(matchId) {
         });
 
         socket.on("state_update", (gameState) => {
-          if (gameState.board instanceof ArrayBuffer) {
+          if (gameState.board instanceof ArrayBuffer)
             gameState.board = new Uint8Array(gameState.board);
-          }
-          console.log("BOARD TYPE:", typeof gameState.board);
-          console.log("BOARD:", gameState.board);
-          console.log("STATE:", gameState.status);
-          console.log(
-            "NON ZERO CELLS:",
-            gameState.board.filter(v => v !== 0).length
-          );
           setState(gameState);
         });
 

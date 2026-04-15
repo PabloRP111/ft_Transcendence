@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // INIT AUTH: revisa token almacenado y hace refresh si es necesario
+  // INIT AUTH: check saved token and do refresh if it´s needed
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = getStoredToken();
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // ESCUCHA SESIONES INVÁLIDAS
+  // Listen invalids Sessions
   useEffect(() => {
     const handleSessionExpired = () => {
       removeStoredToken();

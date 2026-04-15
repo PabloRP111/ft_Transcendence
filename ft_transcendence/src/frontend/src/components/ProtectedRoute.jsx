@@ -5,6 +5,6 @@ export default function ProtectedRoute() {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading)
-    return <p>Loading...</p>; // espera a que AuthProvider termine el refresh
+    return <p>Loading...</p>; // waiting for AuthProvider finished the refresh
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }

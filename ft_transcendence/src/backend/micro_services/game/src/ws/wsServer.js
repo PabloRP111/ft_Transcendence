@@ -1,5 +1,5 @@
 import { getMatch, getAllMatches, deleteMatch } from "../engine/matchStore.js";
-import { stepSimulation, queuePlayerDirection } from "../engine/engine.js";
+import { stepSimulation, queuePlayerDirection,resetRound } from "../engine/engine.js";
 import jwt from "jsonwebtoken";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOS is overrated";
@@ -102,6 +102,13 @@ export function initSocket(io) {
       if (state.status !== "playing") return;
 
       stepSimulation(state);
+
+      if (state.roundOver && !state.matchOver) {
+        setTimeout(() => {
+          resetRound(state);
+          game.to(matchId).emit("state_update", state);
+        }, 1500);
+      }
 
       game.to(matchId).emit("state_update", state);
 
