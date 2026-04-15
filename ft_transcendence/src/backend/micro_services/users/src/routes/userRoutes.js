@@ -1,9 +1,42 @@
 import express from "express";
+import path from "path";
+import fs from "fs/promises";
+import multer from "multer";
+import { fileURLToPath } from "url";
 import pool from "../db.js";
 import bcrypt from "bcrypt";
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const AVATAR_DIR = path.resolve(__dirname, "..", "..", "assets", "users_profile_images");
+
+const avatarStorage = multer.diskStorage({
+  destination: async (_req, _file, cb) => {
+    try {
+      await fs.mkdir(AVATAR_DIR, { recursive: true });
+      cb(null, AVATAR_DIR);
+    } catch (err) {
+      cb(err);
+    }
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `user_${req.params.id}${ext}`);
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only JPG and PNG are allowed"));
+    }
+    return cb(null, true);
+  }
+});
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -142,6 +175,30 @@ router.put("/:id", async (req, res) => {
       return res.status(409).json({ error: "Username or email already taken" });
     console.error(err);
     res.status(500).json({ error: "Database error" });
+  }
+});
+
+// UPLOAD AVATAR
+router.post("/:id/avatar", avatarUpload.single("avatar"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const avatarPath = `./assets/users_profile_images/${req.file.filename}`;
+    const result = await pool.query(
+      `UPDATE auth.users SET avatar = $1 WHERE id = $2
+       RETURNING id, avatar`,
+      [avatarPath, req.params.id]
+    );
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "User not found" });
+
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Avatar upload failed" });
   }
 });
 
@@ -400,7 +457,7 @@ router.get("/:id", async (req, res) => {
   try {
 
     const result = await pool.query(
-      `SELECT id, email, username, wins, matches, score, rank FROM auth.users WHERE id = $1`,
+      `SELECT id, email, username, avatar, wins, matches, score, rank FROM auth.users WHERE id = $1`,
       [req.params.id]
     );
 
@@ -416,6 +473,34 @@ router.get("/:id", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Database error" });
 
+  }
+});
+
+router.get("/:id/avatar", async (req, res) => {
+  try {
+
+    const result = await pool.query(
+      `SELECT avatar FROM auth.users WHERE id = $1`,
+      [req.params.id]
+    );
+    const user = result.rows[0];
+    if (!user)
+      return res.status(404).json({ error: "User not found" });
+    if (!user.avatar)
+      return res.status(404).json({ error: "Avatar not found" });
+
+    const avatarPath = path.resolve(__dirname, "..", "..", user.avatar);
+
+    try {
+      await fs.access(avatarPath);
+    } catch {
+      return res.status(404).json({ error: "Avatar not found" });
+    }
+
+    return res.sendFile(avatarPath);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database Image error" });
   }
 });
 

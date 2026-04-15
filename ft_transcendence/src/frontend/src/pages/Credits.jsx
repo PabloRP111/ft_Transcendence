@@ -41,7 +41,7 @@ export default function CreditsPage() {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-voidBlack font-mono text-cyan-50">
 
       {/* TRON Background Atmosphere */}
       <div className="pointer-events-none absolute inset-0">
@@ -54,7 +54,7 @@ export default function CreditsPage() {
       <Navbar />
 
       <motion.main
-        className="relative z-20 flex min-h-screen items-center justify-center px-10"
+        className="relative z-20 flex flex-1 items-center justify-center px-10"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -62,7 +62,11 @@ export default function CreditsPage() {
         <div className="flex flex-col items-center gap-16">
           <motion.h1
             variants={itemVariants}
-            className="credits-tron-title text-4xl tracking-[0.2em] text-gridBlue text-center"
+            className="neon-title -mt-6 text-5xl sm:text-6xl md:text-6xl uppercase tracking-[0.04em] text-center"
+            style={{
+              textShadow:
+                "0 0 8px rgba(250, 204, 21, 0.82), 0 0 22px rgba(250, 204, 21, 0.42)",
+            }}
           >
             CREDITS
           </motion.h1>
@@ -73,13 +77,13 @@ export default function CreditsPage() {
               <motion.div
                 key={player.id}
                 variants={itemVariants}
-                className="flex flex-col items-center gap-4 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur text-center shadow-[0_0_20px_#00f7ff] hover:border-cyan-400 transition-colors"
+                className="flex flex-col items-center gap-4 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur text-center shadow-[0_0_20px_rgba(250,204,21,0.72)] hover:border-cyan-400 transition-colors"
               >
                 {/* Floating Avatar */}
                 <motion.div
                   animate={{ y: [0, -6, 0] }}
                   transition={{ repeat: Infinity, duration: 2 }}
-                  className="flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_30px_#00f7ff] overflow-hidden bg-cyan-950/30"
+                  className="flex h-20 w-20 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_30px_rgba(250,204,21,0.72)] overflow-hidden bg-cyan-950/30"
                 >
                   {player.avatar ? (
                     <img
@@ -94,10 +98,10 @@ export default function CreditsPage() {
 
                 {/* Info Block */}
                 <div className="space-y-1">
-                  <h2 className="text-sm tracking-[0.18em] text-gridBlue font-bold uppercase">
+                  <h2 className="text-sm tracking-[0.18em] text-yellow-200 font-bold uppercase">
                     {player.name}
                   </h2>
-                  <p className="text-[10px] tracking-[0.1em] text-cyan-400/80 uppercase italic">
+                  <p className="text-[10px] tracking-[0.1em] text-yellow-300/80 uppercase italic">
                     {player.rol}
                   </p>
                 </div>

@@ -4,12 +4,11 @@ import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, U
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
-import { getCurrentUser, searchUsers } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getFriendStatus, getBlockedUsers, unblockUser, removeFriend } from "../api/friends";
+import { getCurrentUser, searchUsers, getImgById } from "../api/users";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest } from "../api/friends";
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
-import userimage from "../assets/userimage.png";
 
 const TABS = ["Stats", "Social"];
 
@@ -19,6 +18,7 @@ export default function ProfilePage() {
   const onlineUsers = usePresence();
 
   const [profile, setProfile] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [status, setStatus] = useState("idle");
   const [tab, setTab] = useState("Stats");
   const [friends, setFriends] = useState([]);
@@ -33,6 +33,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (loading || !isAuthenticated) return;
 
+    let objectUrl = null;
+    let isMounted = true;
+
     setStatus("loading");
     getCurrentUser()
       .then((data) => {
@@ -44,8 +47,20 @@ export default function ProfilePage() {
           rank: Number(data.rank ?? 0),
         });
         setStatus("success");
+        if (!data?.id) return null;
+        return getImgById(data.id);
+      })
+      .then((blob) => {
+        if (!blob || !isMounted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setAvatarUrl(objectUrl);
       })
       .catch(() => setStatus("error"));
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [loading, isAuthenticated]);
 
   useEffect(() => {
@@ -144,7 +159,9 @@ export default function ProfilePage() {
           {/* Avatar */}
           <div className="mb-6 flex justify-center">
             <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-cyan-500/40 shadow-[0_0_20px_rgba(0,247,255,0.3)] overflow-hidden bg-black">
-              <img src={userimage} alt="User Profile" className="h-full w-full object-cover" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="User Profile" className="h-full w-full object-cover" />
+              ) : null}
             </div>
           </div>
 

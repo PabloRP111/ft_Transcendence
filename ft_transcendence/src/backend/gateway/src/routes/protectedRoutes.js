@@ -80,6 +80,49 @@ router.get("/users/:id", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/users/:id/avatar", authMiddleware, async (req, res) => {
+  try {
+    const response = await fetch(`${USERS_SERVICE}/${req.params.id}/avatar`);
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      return res.status(response.status).send(text || "Avatar not found");
+    }
+
+    // Copiar content-type y devolver stream/buffer
+    res.setHeader("Content-Type", response.headers.get("content-type") || "application/octet-stream");
+    const buffer = await response.arrayBuffer();
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("/users/avatar/:id fetch failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
+
+// UPLOAD AVATAR
+router.post("/users/:id/avatar", authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || String(req.user.id) !== String(req.params.id))
+      return res.status(403).json({ error: "Forbidden" });
+
+    const response = await fetch(`${USERS_SERVICE}/${req.params.id}/avatar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": req.headers["content-type"] || "multipart/form-data",
+        ...(req.headers["content-length"] ? { "Content-Length": req.headers["content-length"] } : {})
+      },
+      body: req
+    });
+
+    const contentType = response.headers.get("content-type") || "application/json";
+    res.setHeader("Content-Type", contentType);
+    const buffer = await response.arrayBuffer();
+    return res.status(response.status).send(Buffer.from(buffer));
+  } catch (error) {
+    console.error("/users/:id/avatar upload failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
+
 // UPDATE PROFILE: Update the authenticated user's information
 router.put("/me", authMiddleware, async (req, res) => {
   try {
