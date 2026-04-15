@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
   email TEXT UNIQUE NOT NULL,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
+  avatar TEXT DEFAULT './assets/users_profile_images/userimage.png',
   wins INTEGER NOT NULL DEFAULT 0,
   matches INTEGER NOT NULL DEFAULT 0,
   score INTEGER NOT NULL DEFAULT 0,

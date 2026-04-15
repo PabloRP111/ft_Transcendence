@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
-import userimage from "../assets/userimage.png";
+//import userimage from "../assets/userimage.png";
 import { useAuth } from "../context/AuthContext";
-import { editUser, getCurrentUser } from "../api/users";
+import { editUser, getCurrentUser, getImgById, uploadAvatar } from "../api/users";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -34,17 +34,72 @@ const itemVariants = {
 export default function EditProfilePage() {
   const navigate = useNavigate();
   const { accessToken } = useAuth();
+  const fileInputRef = useRef(null);
+  const avatarUrlRef = useRef(null);
 
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", avatar: "" });
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
+    let objectUrl = null;
+    let isMounted = true;
+
     getCurrentUser()
-      .then((data) => setForm((prev) => ({ ...prev, username: data.username, email: data.email })))
+      .then((data) => {
+        if (!data?.id) return;
+        setUserId(data.id);
+        setForm((prev) => ({
+          ...prev,
+          username: data.username,
+          email: data.email
+        }));
+        return getImgById(data.id);
+      })
+      .then((blob) => {
+        if (!blob || !isMounted) return;
+        if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current);
+        objectUrl = URL.createObjectURL(blob);
+        avatarUrlRef.current = objectUrl;
+        setForm((prev) => ({ ...prev, avatar: objectUrl }));
+      })
       .catch(() => {});
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!userId) return;
+    if (!/(image\/jpeg|image\/png)/.test(file.type)) return;
+
+    if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current);
+    const previewUrl = URL.createObjectURL(file);
+    avatarUrlRef.current = previewUrl;
+    setForm((prev) => ({ ...prev, avatar: previewUrl }));
+
+    uploadAvatar(userId, file)
+      .then(() => getImgById(userId))
+      .then((blob) => {
+        if (!blob) return;
+        if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current);
+        const freshUrl = URL.createObjectURL(blob);
+        avatarUrlRef.current = freshUrl;
+        setForm((prev) => ({ ...prev, avatar: freshUrl }));
+      })
+      .catch(() => {});
+    e.target.value = "";
   };
 
  
@@ -112,12 +167,22 @@ export default function EditProfilePage() {
             className="mb-8 flex justify-center"
           >
             <div className="flex h-24 w-24 items-center justify-center rounded-full border-[color:var(--tron-border)]">
-              <img
-                src={userimage}
-                alt="userimage"
-                className="h-24 w-24 rounded-full object-cover"
-              />
+              {form.avatar ? (
+                <img
+                  src={form.avatar}
+                  alt="avatar"
+                  onClick={handleAvatarClick}
+                  className="h-24 w-24 rounded-full object-cover"
+                />
+              ) : null}
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              hidden
+            />
           </motion.div>
 
           {/* Title */}
