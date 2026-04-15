@@ -16,8 +16,13 @@ function TronCanvas({ engineState, config }) {
     let animationFrameId;
 
     const render = () => {
-      if (!engineState || engineState.roundOver)
+      if (!engineState) return;
+      if (engineState.roundOver) {
+        context.clearRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+        context.fillStyle = "#04070b";
+        context.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
         return;
+      }
 
       const { board, players } = engineState;
 

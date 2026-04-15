@@ -64,13 +64,13 @@ export default function GridLanding() {
             </h2>
 
             <div className="flex-1 overflow-y-auto space-y-2">
-              {/* MOCK DATA (luego conectas API) */}
+              {/* MOCK DATA */}
               {[
                 { name: "prosas-p", score: 1200 },
                 { name: "mzuloaga", score: 1100 },
                 { name: "aamoros", score: 980 },
                 { name: "jotrujil", score: 870 },
-                { name: "femoreno", score: 820 },
+                { name: "femoreno", score: -3 },
               ].map((player, index) => (
                 <div
                   key={index}

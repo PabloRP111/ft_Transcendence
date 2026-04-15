@@ -6,7 +6,8 @@ function toIndex(x, y) { return y * GRID_WIDTH + x; }
 function makePlayer(id, name, x, y, dir, isAi = false) {
   return { 
     id, 
-    name, 
+    name,
+    avatar: null,
     isAi, 
     x, 
     y, 
@@ -33,6 +34,7 @@ export function createMatchState(previousMatchesWon = [0, 0]) {
     matchesWon: [...previousMatchesWon],
     status: "waiting",
     mode: null,
+    _resetScheduled: false
   };
 
   state.players.forEach(p => state.board[toIndex(p.x, p.y)] = p.id);
@@ -47,6 +49,7 @@ export function resetRound(state) {
   state.tick = 0;
   state.roundOver = false;
   state.roundNumber += 1;
+  state._resetScheduled = false;
 
   state.players.forEach(p => {
     p.x = p.id === 1 ? 20 : GRID_WIDTH - 21;

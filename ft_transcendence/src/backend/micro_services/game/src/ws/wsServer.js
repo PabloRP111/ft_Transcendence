@@ -3,6 +3,14 @@ import { stepSimulation, queuePlayerDirection,resetRound } from "../engine/engin
 import jwt from "jsonwebtoken";
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOS is overrated";
+const USERS_SERVICE_URL = "http://users:3002";
+
+async function fetchUser(userId) {
+  const res = await fetch(`${USERS_SERVICE_URL}/${userId}`);
+  if (!res.ok)
+    return null;
+  return res.json();
+}
 
 export function verifyAccessToken(token) {
   return jwt.verify(token, ACCESS_SECRET);
@@ -30,7 +38,7 @@ export function initSocket(io) {
   game.on("connection", (socket) => {
     console.log("GAME SOCKET CONNECTED");
 
-    socket.on("join_match", ({ matchId }) => {
+    socket.on("join_match", async ({ matchId }) => {
       const state = getMatch(matchId);
       if (!state) return;
 
@@ -48,14 +56,19 @@ export function initSocket(io) {
       socket.data.matchId = matchId;
       socket.data.playerId = player.id;
 
+      const user = await fetchUser(socket.data.userId);
+
+      if (user) {
+        player.name = user.username;
+        player.avatar = user.avatar || null;
+      }
+
       const allConnected = state.players.every(p => p.connected);
       if (allConnected) {
         state.status = "playing";
       }
 
-      setTimeout(() => {
-        game.to(matchId).emit("state_update", state);
-      }, 50);
+      game.to(matchId).emit("state_update", state);
     });
 
     socket.on("move", ({ direction }) => {
@@ -84,7 +97,7 @@ export function initSocket(io) {
       if (!player) return;
 
       player.userId = socket.data.userId;
-      player.connected = true;
+      player.connected = false;
 
       const anyConnected = state.players.some(p => p.connected);
       if (!anyConnected) {
@@ -103,9 +116,12 @@ export function initSocket(io) {
 
       stepSimulation(state);
 
-      if (state.roundOver && !state.matchOver) {
+      if (state.roundOver && !state.matchOver && !state._resetScheduled) {
+        state._resetScheduled = true;
+
         setTimeout(() => {
           resetRound(state);
+          state._resetScheduled = false;
           game.to(matchId).emit("state_update", state);
         }, 1500);
       }

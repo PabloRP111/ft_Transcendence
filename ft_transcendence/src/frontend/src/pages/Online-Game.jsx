@@ -142,7 +142,6 @@ export default function TronPvpArena() {
                 </div>
                 <h2 className="text-xl uppercase tracking-[0.2em] text-cyan-300">{state.players[0]?.name || "Player 1"}</h2>
                 <Lives lives={state.players[0]?.lives} maxLives={config.startingLives} />
-                <p className="text-sm uppercase tracking-widest text-cyan-100/60">Wins: {state.matchesWon?.[0] || 0}</p>
               </motion.section>
 
               {/* ARENA */}
@@ -162,25 +161,37 @@ export default function TronPvpArena() {
                   )}
                   {matchResult && (
                     <motion.div 
-                      initial={{ opacity: 0 }} 
-                      animate={{ opacity: 1 }}
-                      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md border border-cyan-500/30"
                     >
-                      <h2 className="text-6xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]">
-                        {matchResult === "DRAW" ? "CONNECTION STALEMATE" : `${matchResult} DOMINATES`}
+                      {/* Título con efecto Neón */}
+                      <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100 mb-12 drop-shadow-[0_0_20px_rgba(0,247,255,0.8)]">
+                        {matchResult === "DRAW" ? "DRAW" : `${matchResult} WINS`}
                       </h2>
-                      <button
-                        className="mt-12 border-2 border-cyan-500 px-12 py-4 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all"
-                        onClick={() => window.location.reload()}
-                      >
-                        REMATCH
-                      </button>
+
+                      {/* Contenedor de botones */}
+                      <div className="flex gap-6">
+                        <button
+                          className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold shadow-[0_0_15px_rgba(0,247,255,0.2)] hover:shadow-[0_0_25px_rgba(0,247,255,0.4)]"
+                          onClick={() => window.location.reload()}
+                        >
+                          Play Another Game
+                        </button>
+                        
+                        <button
+                          className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold shadow-[0_0_15px_rgba(0,247,255,0.2)] hover:shadow-[0_0_25px_rgba(0,247,255,0.4)]"
+                          onClick={() => window.location.href = "/"}
+                        >
+                          Back to Home
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </motion.div>
                 <div className="flex items-center gap-4 text-xs uppercase tracking-[0.3em] text-cyan-100/50">
                   <Globe size={14} className="animate-pulse" />
-                  <span>PVP Server: Global Region // Room: {matchId}</span>
+                  <span>GLOBAL PVP</span>
                 </div>
               </div>
 
@@ -198,7 +209,6 @@ export default function TronPvpArena() {
                 </div>
                 <h2 className="text-xl uppercase tracking-[0.2em] text-pink-500">{state.players[1]?.name || "Waiting..."}</h2>
                 <Lives lives={state.players[1]?.lives} maxLives={config.startingLives} />
-                <p className="text-sm uppercase tracking-widest text-pink-100/60">Wins: {state.matchesWon?.[1] || 0}</p>
               </motion.section>
             </main>
           </motion.div>

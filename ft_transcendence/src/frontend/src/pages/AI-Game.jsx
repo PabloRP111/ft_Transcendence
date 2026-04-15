@@ -119,21 +119,22 @@ export default function TronDuelArena() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md border border-cyan-500/30"
               >
-                {/* Título del Ganador con clase neon-title */}
-                <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100">
+                {/* Título con efecto Neón */}
+                <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100 mb-12">
                   {matchResult === "DRAW" ? "DRAW" : `${matchResult} WINS`}
                 </h2>
 
-                {/* Contenedor de botones con más margen superior (mt-12) */}
-                <div className="flex gap-6 mt-12">
+                {/* Contenedor de botones */}
+                <div className="flex gap-6">
                   <button
-                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm"
-                    onClick={restartMatch}
+                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold"
+                    onClick={() => window.location.reload()}
                   >
-                    Restart Match
+                    Rematch
                   </button>
+                  
                   <button
-                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm"
+                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold"
                     onClick={() => window.location.href = "/"}
                   >
                     Back to Home
