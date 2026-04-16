@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser, searchUsers, getImgById } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest } from "../api/friends";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getBlockedUsers } from "../api/friends";
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";

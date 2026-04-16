@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS chat.conversations (
 -- Idempotent migrations for existing deployments
 ALTER TABLE chat.conversations ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT true;
 ALTER TABLE chat.conversations ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE chat.conversation_participants ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS chat.conversation_participants (
   conversation_id INTEGER NOT NULL REFERENCES chat.conversations(id) ON DELETE CASCADE,
@@ -19,6 +18,8 @@ CREATE TABLE IF NOT EXISTS chat.conversation_participants (
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (conversation_id, user_id)
 );
+
+ALTER TABLE chat.conversation_participants ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS chat.messages (
   id SERIAL PRIMARY KEY,
