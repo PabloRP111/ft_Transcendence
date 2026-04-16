@@ -35,6 +35,7 @@ services:
       #connect to postgres container using service name as hostname
       DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/transcendence
       #shared JWT secret (from .env), must match the value used by all other services
+      JWT_SECRET: ${JWT_ACCESS_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
     depends_on:
       - postgres
@@ -55,11 +56,15 @@ services:
       - postgres
     environment:
       CHAT_SERVICE: http://chat:3003
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
     networks:
       - transcendence
 
   game:
     build: ./backend/micro_services/game
+    environment:
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
     networks:
       - transcendence
     depends_on:

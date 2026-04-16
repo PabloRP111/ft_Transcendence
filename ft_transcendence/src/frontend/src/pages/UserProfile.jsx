@@ -7,6 +7,7 @@ import LightCycles from "../components/LightCycles";
 import { getUserById, getUserByUsername } from "../api/users";
 import { getFriendStatus, sendFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
+import { getStoredToken, decodeToken } from "../utils/auth";
 import userimage from "../assets/userimage.png";
 
 export default function UserProfile() {
@@ -20,9 +21,15 @@ export default function UserProfile() {
   const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
+    const currentUserId = decodeToken(getStoredToken())?.id;
     const fetchFn = /^\d+$/.test(id) ? getUserById(id) : getUserByUsername(id);
     fetchFn
       .then((data) => {
+        // If viewing your own profile, redirect to /profile
+        if (currentUserId && String(data.id) === String(currentUserId)) {
+          navigate("/profile", { replace: true });
+          return Promise.reject("self");
+        }
         setProfile({
           id: data.id,
           username: data.username,
@@ -35,7 +42,7 @@ export default function UserProfile() {
         return getFriendStatus(data.id);
       })
       .then((rel) => setFriendStatus(rel.status))
-      .catch(() => setStatus("error"));
+      .catch((err) => { if (err !== "self") setStatus("error"); });
   }, [id]);
 
   const handleFriendAction = async () => {
