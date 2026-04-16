@@ -1,10 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { UserRound, Heart, Globe, Search } from "lucide-react";
 import TronCanvas from "../components/TronCanvas";
 import { useTronPvP } from "../hooks/useTronPvP";
 import Navbar from "../components/Navbar";
 import { findMatch } from "../api/game";
+import { createConversation, postSystemMessage } from "../api/chat";
+import { decodeToken, getStoredToken } from "../utils/auth";
 
 function MatchmakingLoader() {
   return (
@@ -59,13 +62,28 @@ function Lives({ lives, maxLives }) {
 }
 
 export default function TronPvpArena() {
-  const [matchId, setMatchId] = useState(null);
+  const location = useLocation();
+  // If navigated here from a game invite, matchId is in route state — skip matchmaking
+  const [matchId, setMatchId] = useState(location.state?.matchId ?? null);
   const { config, state, matchResult, sendMove } = useTronPvP(matchId);
+  const isInviteGame = !!location.state?.matchId;
+
+  // If the user is already on this page and accepts a new invite, React Router
+  // won't remount the component — location.state updates but the useState
+  // initializer above won't re-run. Sync it manually.
+  useEffect(() => {
+    const incoming = location.state?.matchId;
+    if (incoming && incoming !== matchId) {
+      setMatchId(incoming);
+    }
+  }, [location.state?.matchId]);
 
   const ready = state?.status === "playing";
 
-  // MATCHMAKING
+  // MATCHMAKING — skipped when matchId is already set (e.g. from invite)
   useEffect(() => {
+    if (matchId) return;
+
     async function initMatchmaking() {
       try {
         const res = await findMatch();
@@ -77,6 +95,37 @@ export default function TronPvpArena() {
 
     initMatchmaking();
   }, []);
+
+  // POST MATCH RESULT TO DM — invite games only, Player 1 only
+  useEffect(() => {
+    if (!matchResult || !state || !isInviteGame) return;
+
+    const currentUserId = String(decodeToken(getStoredToken())?.id);
+    const p1 = state.players[0];
+    const p2 = state.players[1];
+
+    // Only Player 1 posts to avoid both users sending the same message
+    if (p1?.userId !== currentUserId) return;
+
+    const p1Name = p1?.name || "Player 1";
+    const p2Name = p2?.name || "Player 2";
+    const content = matchResult === "DRAW"
+      ? `⚔ ${p1Name} and ${p2Name} drew`
+      : matchResult === p1Name
+        ? `⚔ ${p1Name} defeated ${p2Name}`
+        : `⚔ ${p2Name} defeated ${p1Name}`;
+
+    async function postResult() {
+      try {
+        const dm = await createConversation("private", [p2.userId]);
+        await postSystemMessage(dm.id, content);
+      } catch (err) {
+        console.error("[game result] failed to post chat notification:", err);
+      }
+    }
+
+    postResult();
+  }, [matchResult]);
 
   // INPUT
   useEffect(() => {

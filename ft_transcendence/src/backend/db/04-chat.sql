@@ -35,3 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created
   ON chat.messages (conversation_id, created_at);
+
+-- Idempotent migrations for system message support
+ALTER TABLE chat.messages ALTER COLUMN sender_id DROP NOT NULL;
+ALTER TABLE chat.messages ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'user' CHECK (type IN ('user', 'system'));

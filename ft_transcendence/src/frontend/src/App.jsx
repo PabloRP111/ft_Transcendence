@@ -17,11 +17,14 @@ import Terms from "./pages/Terms.jsx";
 import Privacy from "./pages/Privacy.jsx";
 
 import useTronTheme from "./hooks/useTronTheme";
+import InviteModal from "./components/InviteModal";
 
 function RouterContent() {
   useTronTheme();
 
   return (
+    <>
+    <InviteModal />
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/register" element={<Register />} />
@@ -38,6 +41,7 @@ function RouterContent() {
         <Route path="/online-game" element={<OnlineGame />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

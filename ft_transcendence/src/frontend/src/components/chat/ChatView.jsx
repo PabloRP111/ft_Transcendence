@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck } from "lucide-react";
+import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck, Swords } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
@@ -15,6 +15,7 @@ export default function ChatView({
   dmFriendStatus,
   otherReadAt,
   onAddFriend,
+  onGameInvite,
   onTyping,
   onSendMessage,
   onBack,
@@ -93,6 +94,16 @@ export default function ChatView({
             </div>
           )}
         </div>
+        {/* Challenge button — only for DMs when the other user is online and not blocked */}
+        {isDM && isOtherOnline && !isBlocked && (
+          <button
+            onClick={onGameInvite}
+            className="text-cyan-100/20 hover:text-cyan-300 transition-colors"
+            title="Challenge to a game"
+          >
+            <Swords size={14} />
+          </button>
+        )}
         {isLeavable && (
           <button
             onClick={onLeaveChannel}
@@ -109,6 +120,17 @@ export default function ChatView({
         <div /> {/* bottom spacer */}
 
         {[...messages].reverse().map((msg) => {
+          // System messages (game notifications) render centered and in italics
+          if (msg.type === 'system' || msg.senderId === null) {
+            return (
+              <div key={msg.id} className="flex justify-center animate-in fade-in">
+                <span className="text-[9px] italic text-cyan-100/40 font-mono px-2">
+                  {msg.content}
+                </span>
+              </div>
+            );
+          }
+
           const isMe = String(msg.senderId) === String(myId);
           const time = msg.createdAt
             ? new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })

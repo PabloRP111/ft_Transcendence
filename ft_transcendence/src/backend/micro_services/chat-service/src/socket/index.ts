@@ -24,6 +24,9 @@ interface ClientToServerEvents {
   markRead: (payload: { conversationId: string }) => void;
   typingStart: (payload: { conversationId: string }) => void;
   typingStop: (payload: { conversationId: string }) => void;
+  gameInviteSend: (payload: { targetId: string }) => void;
+  gameInviteAccept: (payload: { inviterId: string; matchId: string }) => void;
+  gameInviteDecline: (payload: { inviterId: string }) => void;
 }
 
 interface ServerToClientEvents {
@@ -36,6 +39,11 @@ interface ServerToClientEvents {
   userOnline: (data: { userId: string }) => void;
   userOffline: (data: { userId: string }) => void;
   "force-logout": () => void;
+  gameInviteReceived: (data: { inviterId: string; inviterUsername: string }) => void;
+  gameInviteAccepted: (data: { matchId: string }) => void;
+  gameInviteDeclined: (data: { targetId: string }) => void;
+  gameInviteExpired: (data: { targetId: string }) => void;
+  gameInviteCancelled: (data: { inviterId: string }) => void;
 }
 
 /* ──────────────── STATE ──────────────── */
@@ -47,6 +55,14 @@ export function getChatNamespace() {
 }
 
 const presence = new Map<string, Set<string>>();
+
+// Tracks in-flight game invites. Key is the inviterId.
+// Only one outgoing invite per user at a time.
+interface PendingInvite {
+  targetId: string;
+  timer: ReturnType<typeof setTimeout>;
+}
+const pendingInvites = new Map<string, PendingInvite>();
 
 /* ──────────────── HELPERS ──────────────── */
 
@@ -68,6 +84,29 @@ function hasStringField(payload: unknown, field: string): boolean {
     typeof (payload as Record<string, unknown>)[field] === 'string' &&
     ((payload as Record<string, unknown>)[field] as string).trim() !== ''
   );
+}
+
+// Fetches the username for a given userId from the shared auth.users table
+async function getUsernameById(userId: string): Promise<string> {
+  const result = await pool.query<{ username: string }>(
+    `SELECT username FROM auth.users WHERE id = $1`,
+    [parseInt(userId, 10)]
+  );
+  return result.rows[0]?.username ?? 'Unknown';
+}
+
+// Returns true if either user has blocked the other
+async function isBlocked(userA: string, userB: string): Promise<boolean> {
+  const result = await pool.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM auth.friendships
+       WHERE status = 'blocked'
+         AND ((user_id = $1 AND friend_id = $2)
+           OR (user_id = $2 AND friend_id = $1))
+     ) AS exists`,
+    [parseInt(userA, 10), parseInt(userB, 10)]
+  );
+  return result.rows[0]?.exists ?? false;
 }
 
 function isJwtPayload(payload: unknown): payload is JwtPayload {
@@ -195,6 +234,7 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
           content: msg.content,
           createdAt: msg.created_at,
           editedAt: msg.edited_at,
+          type: 'user',
           sender: { username: msg.username }
         });
       } catch (err) {
@@ -241,7 +281,89 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       socket.to(conversationId).emit('typingStop', { conversationId, userId });
     });
 
+    /* ───── Game Invites ───── */
+
+    socket.on('gameInviteSend', async ({ targetId }) => {
+      // Target must be online
+      if (!presence.has(targetId) || presence.get(targetId)!.size === 0) return;
+
+      // Inviter can only have one pending invite at a time
+      if (pendingInvites.has(userId)) return;
+
+      // Target can only receive one invite at a time
+      const targetAlreadyInvited = [...pendingInvites.values()].some(i => i.targetId === targetId);
+      if (targetAlreadyInvited) return;
+
+      // Block check — either direction prevents the invite
+      try {
+        if (await isBlocked(userId, targetId)) return;
+      } catch (err) {
+        console.error('[socket] gameInviteSend block check error:', err);
+        return;
+      }
+
+      // 30s expiry: notify both sides and clean up
+      const timer = setTimeout(() => {
+        pendingInvites.delete(userId);
+        chat.to(`user-${userId}`).emit('gameInviteExpired', { targetId });
+        chat.to(`user-${targetId}`).emit('gameInviteCancelled', { inviterId: userId });
+      }, 30_000);
+
+      pendingInvites.set(userId, { targetId, timer });
+
+      try {
+        const inviterUsername = await getUsernameById(userId);
+        chat.to(`user-${targetId}`).emit('gameInviteReceived', { inviterId: userId, inviterUsername });
+      } catch (err) {
+        // If username lookup fails, clean up the invite rather than leaving it dangling
+        clearTimeout(timer);
+        pendingInvites.delete(userId);
+        console.error('[socket] gameInviteSend error:', err);
+      }
+    });
+
+    socket.on('gameInviteAccept', ({ inviterId, matchId }) => {
+      const invite = pendingInvites.get(inviterId);
+      // Validate this socket's user is the intended target
+      if (!invite || invite.targetId !== userId) return;
+
+      clearTimeout(invite.timer);
+      pendingInvites.delete(inviterId);
+
+      // Notify both players to navigate to the game room
+      chat.to(`user-${inviterId}`).emit('gameInviteAccepted', { matchId });
+      chat.to(`user-${userId}`).emit('gameInviteAccepted', { matchId });
+    });
+
+    socket.on('gameInviteDecline', ({ inviterId }) => {
+      const invite = pendingInvites.get(inviterId);
+      if (!invite || invite.targetId !== userId) return;
+
+      clearTimeout(invite.timer);
+      pendingInvites.delete(inviterId);
+
+      chat.to(`user-${inviterId}`).emit('gameInviteDeclined', { targetId: userId });
+    });
+
     socket.on('disconnect', async () => {
+      // If this user had a pending outgoing invite, cancel it
+      const outgoing = pendingInvites.get(userId);
+      if (outgoing) {
+        clearTimeout(outgoing.timer);
+        pendingInvites.delete(userId);
+        chat.to(`user-${outgoing.targetId}`).emit('gameInviteCancelled', { inviterId: userId });
+      }
+
+      // If this user was the target of a pending invite, cancel it from the inviter's side
+      for (const [inviterId, invite] of pendingInvites.entries()) {
+        if (invite.targetId === userId) {
+          clearTimeout(invite.timer);
+          pendingInvites.delete(inviterId);
+          chat.to(`user-${inviterId}`).emit('gameInviteExpired', { targetId: userId });
+          break;
+        }
+      }
+
       presence.get(userId)?.delete(socket.id);
       if (!presence.has(userId) || presence.get(userId)!.size === 0) {
         presence.delete(userId);

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, LogOut } from "lucide-react";
+import { Search, Plus, LogOut, Swords } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
 
@@ -11,6 +11,7 @@ export default function InboxView({
   onOpenConversation,
   onNavigate,
   onLeaveChannel,
+  onGameInvite,
 }) {
   const onlineUsers = usePresence();
 
@@ -98,6 +99,15 @@ export default function InboxView({
                     {convDisplayName(conv)}
                   </span>
                 </div>
+                {conv.type === "private" && isOnline && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onGameInvite?.(conv); }}
+                    className="flex-shrink-0 text-cyan-100/20 hover:text-cyan-300 transition-colors"
+                    title="Challenge to a game"
+                  >
+                    <Swords size={12} />
+                  </button>
+                )}
                 {isLeavable && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onLeaveChannel?.(conv.id); }}

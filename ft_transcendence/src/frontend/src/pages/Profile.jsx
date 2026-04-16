@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus } from "lucide-react";
+import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus, Swords } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
@@ -9,6 +9,8 @@ import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendReque
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
+import { useSocket } from "../context/SocketContext";
+import { sendGameInvite } from "../utils/gameInvite";
 
 const TABS = ["Stats", "Social"];
 
@@ -16,6 +18,7 @@ export default function ProfilePage() {
   const { loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const onlineUsers = usePresence();
+  const { socketRef } = useSocket();
 
   const [profile, setProfile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -362,7 +365,9 @@ export default function ProfilePage() {
                       <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Online</p>
                       <div className="space-y-2">
                         {friends.filter((f) => onlineUsers.has(String(f.id))).map((f) => (
-                          <FriendRow key={f.id} friend={f} online navigate={navigate} onRemove={async () => { await removeFriend(f.id).catch(() => {}); setFriends((prev) => prev.filter((x) => x.id !== f.id)); }} />
+                          <FriendRow key={f.id} friend={f} online navigate={navigate}
+                            onChallenge={() => sendGameInvite(socketRef, f.id, f.username)}
+                            onRemove={async () => { await removeFriend(f.id).catch(() => {}); setFriends((prev) => prev.filter((x) => x.id !== f.id)); }} />
                         ))}
                       </div>
                     </div>
@@ -441,7 +446,7 @@ export default function ProfilePage() {
   );
 }
 
-function FriendRow({ friend, online, navigate, onRemove }) {
+function FriendRow({ friend, online, navigate, onChallenge, onRemove }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
       <div className="flex items-center gap-2">
@@ -457,6 +462,15 @@ function FriendRow({ friend, online, navigate, onRemove }) {
         >
           <MessageSquare size={11} /> DM
         </button>
+        {online && (
+          <button
+            onClick={onChallenge}
+            className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded hover:bg-yellow-500/10 transition-colors"
+            title="Challenge to a game"
+          >
+            <Swords size={11} />
+          </button>
+        )}
         <button
           onClick={onRemove}
           className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-red-500/20 text-red-400/50 px-2 py-1 rounded hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/40 transition-colors"

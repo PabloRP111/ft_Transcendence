@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus, ShieldOff, ShieldCheck } from "lucide-react";
+import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus, ShieldOff, ShieldCheck, Swords } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getUserById, getUserByUsername } from "../api/users";
 import { getFriendStatus, sendFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
 import { getStoredToken, decodeToken } from "../utils/auth";
+import { useSocket } from "../context/SocketContext";
+import { sendGameInvite } from "../utils/gameInvite";
 import userimage from "../assets/userimage.png";
 
 export default function UserProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const onlineUsers = usePresence();
+  const { socketRef } = useSocket();
 
   const [profile, setProfile] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -169,6 +172,18 @@ export default function UserProfile() {
                 >
                   <MessageSquare size={14} /> DM
                 </button>
+                {/* Challenge button — only shown when target is online */}
+                {isOnline && (
+                  <button
+                    onClick={() => {
+                      sendGameInvite(socketRef, profile.id, profile.username);
+                    }}
+                    className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-2 text-xs uppercase tracking-widest text-yellow-300 hover:bg-yellow-500/20 transition-colors"
+                    title="Challenge to a game"
+                  >
+                    <Swords size={14} /> Challenge
+                  </button>
+                )}
                 {(() => { const btn = friendButton(); return (
                   <button
                     onClick={handleFriendAction}

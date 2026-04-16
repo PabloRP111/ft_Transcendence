@@ -14,6 +14,10 @@ export function useTronPvP(matchId) {
   useEffect(() => {
     if (!matchId || !accessToken) return;
 
+    // Reset game state so the previous match's result overlay doesn't persist
+    // while the new socket connection is being established.
+    setState(null);
+
     let mounted = true;
 
     async function init() {

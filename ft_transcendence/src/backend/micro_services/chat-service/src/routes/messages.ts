@@ -67,6 +67,64 @@ router.post('/:conversationId/messages', async (req: Request, res: Response): Pr
   }
 });
 
+// ─── POST /conversations/:conversationId/system-message ───────────────────────
+// Posts a system message (no sender) to a conversation.
+// Caller must be a participant. Used for game notifications (invite sent, match result).
+
+router.post('/:conversationId/system-message', async (req: Request, res: Response): Promise<void> => {
+  const { conversationId } = req.params;
+  const { content } = req.body as { content: unknown };
+  const userId = parseInt(req.userId, 10);
+
+  const contentError = validateContent(content);
+  if (contentError) {
+    res.status(400).json({ error: contentError });
+    return;
+  }
+  const validContent = (content as string).trim();
+
+  const allowed = await isParticipant(conversationId, userId);
+  if (!allowed) {
+    res.status(403).json({ error: 'not a participant in this conversation' });
+    return;
+  }
+
+  try {
+    const result = await pool.query<{
+      id: number;
+      conversation_id: number;
+      content: string;
+      created_at: string;
+    }>(
+      `INSERT INTO chat.messages (conversation_id, sender_id, content, type)
+       VALUES ($1, NULL, $2, 'system')
+       RETURNING id, conversation_id, content, created_at`,
+      [conversationId, validContent],
+    );
+
+    const msg = result.rows[0];
+    const payload = {
+      id: msg.id,
+      conversationId: msg.conversation_id,
+      senderId: null,
+      content: msg.content,
+      createdAt: msg.created_at,
+      editedAt: null,
+      type: 'system',
+      sender: null,
+    };
+
+    // Emit to all participants in the room in real time
+    const chat = getChatNamespace();
+    if (chat) chat.to(conversationId).emit('newMessage', payload);
+
+    res.status(201).json(payload);
+  } catch (err) {
+    console.error('[POST /system-message] error:', err);
+    res.status(500).json({ error: 'internal server error' });
+  }
+});
+
 // ─── GET /conversations/:conversationId/messages ───────────────────────────────
 
 router.get('/:conversationId/messages', async (req: Request, res: Response): Promise<void> => {
@@ -88,20 +146,21 @@ router.get('/:conversationId/messages', async (req: Request, res: Response): Pro
     type MessageRow = {
       id: number;
       conversation_id: number;
-      sender_id: number;
+      sender_id: number | null;
       content: string;
       created_at: string;
       edited_at: string | null;
-      username: string;
+      type: string;
+      username: string | null;
     };
 
     let rows: MessageRow[];
 
-    /* Updated SELECT queries to JOIN with users [English Comment] */
+    // LEFT JOIN so system messages (sender_id = NULL) are included without a username
     const baseQuery = `
-      SELECT m.id, m.conversation_id, m.sender_id, m.content, m.created_at, m.edited_at, u.username
+      SELECT m.id, m.conversation_id, m.sender_id, m.content, m.created_at, m.edited_at, m.type, u.username
       FROM chat.messages m
-      JOIN auth.users u ON m.sender_id = u.id
+      LEFT JOIN auth.users u ON m.sender_id = u.id
       WHERE m.conversation_id = $1
     `;
 
@@ -146,7 +205,8 @@ router.get('/:conversationId/messages', async (req: Request, res: Response): Pro
         content: msg.content,
         createdAt: msg.created_at,
         editedAt: msg.edited_at,
-        sender: { username: msg.username },
+        type: msg.type,
+        sender: msg.username ? { username: msg.username } : null,
       })),
       otherReadAt,
     });

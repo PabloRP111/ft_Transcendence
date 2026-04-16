@@ -8,6 +8,7 @@ import { searchUsers } from "../api/users";
 import { getFriendStatus, sendFriendRequest } from "../api/friends";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
+import { sendGameInvite } from "../utils/gameInvite";
 
 // Utilities & Views
 import { getMyIdFromToken, getLastOpened, saveLastOpened } from "../utils/chatStorage";
@@ -296,6 +297,11 @@ export default function ChatModule() {
               setConversations((prev) => prev.filter((c) => c.id !== convId));
               if (activeConversationId === convId) setActiveConversationId(null);
             }}
+            onGameInvite={(conv) => {
+              const other = conv.participants?.[0];
+              if (!other) return;
+              sendGameInvite(socketRef, other.id, other.username);
+            }}
           />
         )}
 
@@ -314,6 +320,11 @@ export default function ChatModule() {
               if (!otherId) return;
               await sendFriendRequest(otherId).catch(() => {});
               setDmFriendStatus("pending_sent");
+            }}
+            onGameInvite={() => {
+              const other = activeConversation?.participants?.[0];
+              if (!other) return;
+              sendGameInvite(socketRef, other.id, other.username);
             }}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}

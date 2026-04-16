@@ -85,6 +85,17 @@ export async function leaveChannel(conversationId) {
 }
 
 /**
+ * Post a system message (no sender) to a conversation.
+ * Used for game notifications: invite sent, match result.
+ */
+export async function postSystemMessage(conversationId, content) {
+  return apiFetch(`/chat/conversations/${conversationId}/system-message`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+/**
  * Edit an existing message.
  * Backend constraint: Only the original sender can perform this action.
  */
