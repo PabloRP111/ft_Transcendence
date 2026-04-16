@@ -2,7 +2,7 @@ import { getMatch, getAllMatches, deleteMatch } from "../engine/matchStore.js";
 import { stepSimulation, queuePlayerDirection,resetRound } from "../engine/engine.js";
 import jwt from "jsonwebtoken";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOSIsOverrated";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const USERS_SERVICE_URL = "http://users:3002";
 
 async function fetchUser(userId) {

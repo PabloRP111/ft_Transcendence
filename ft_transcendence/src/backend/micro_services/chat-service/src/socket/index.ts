@@ -5,9 +5,12 @@ import pool from '../db/pool';
 import { isParticipant } from '../db/helpers';
 import { validateContent } from '../utils/validate';
 import { rateLimiter } from './rateLimiter';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /* ──────────────── TYPES ──────────────── */
-
 interface JwtPayload {
   id: number;
 }

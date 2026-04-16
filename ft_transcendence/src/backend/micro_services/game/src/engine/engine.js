@@ -125,7 +125,6 @@ export function stepSimulation(state) {
         state.winner = winner;
         state.matchesWon[winner.id - 1]++;
       }
-      
     }
   }
 

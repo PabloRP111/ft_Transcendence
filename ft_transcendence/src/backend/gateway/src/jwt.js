@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { pool } from "./db.js";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "IOSIsOverrated";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "AlsoWindows";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 // access token (normal login)
 export function generateAccessToken(userId, sessionId) {
