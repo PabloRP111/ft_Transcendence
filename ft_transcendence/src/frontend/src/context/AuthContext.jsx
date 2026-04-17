@@ -36,38 +36,20 @@ export function AuthProvider({ children }) {
     const initAuth = async () => {
       const storedToken = getStoredToken();
 
-      if (!storedToken) {
-        try {
-          const data = await refresh();
-          if (data.accessToken) {
-            setStoredToken(data.accessToken);
-            setAccessToken(data.accessToken);
-          }
-        } catch {
-          setAccessToken(null);
-        } finally {
-          setLoading(false);
-        }
-        return;
-      }
-
-      if (!isTokenExpired(storedToken)) {
+      if (storedToken && !isTokenExpired(storedToken)) {
         setAccessToken(storedToken);
         setLoading(false);
         return;
       }
 
-      try {
-        const data = await refresh();
-        if (data.accessToken) {
-          setStoredToken(data.accessToken);
-          setAccessToken(data.accessToken);
-        }
-      } catch {
+      const data = await refresh();
+
+      if (data?.accessToken) {
+        setStoredToken(data.accessToken);
+        setAccessToken(data.accessToken);
+      } else {
         removeStoredToken();
         setAccessToken(null);
-      } finally {
-        setLoading(false);
       }
     };
 
