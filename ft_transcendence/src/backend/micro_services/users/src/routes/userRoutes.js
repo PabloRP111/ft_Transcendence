@@ -218,6 +218,56 @@ router.get("/by-username/:username", async (req, res) => {
   }
 });
 
+// POST /match-result — internal score updates from game service
+// Body: { results: [{ userId, delta, win }] }
+router.post("/match-result", async (req, res) => {
+  const { results } = req.body;
+
+  if (!Array.isArray(results) || results.length === 0) {
+    return res.status(400).json({ error: "Missing results" });
+  }
+
+  const normalized = results.map((r) => {
+    const userId = parseInt(r.userId, 10);
+    const delta = parseInt(r.delta, 10);
+    const win = Boolean(r.win);
+    return { userId, delta, win };
+  });
+
+  const invalid = normalized.some((r) => !Number.isFinite(r.userId) || !Number.isFinite(r.delta));
+  if (invalid) {
+    return res.status(400).json({ error: "Invalid results" });
+  }
+
+  try {
+    await pool.query("BEGIN");
+
+    for (const r of normalized) {
+      await pool.query(
+        "UPDATE auth.users SET score = GREATEST(0, score + $1), matches = matches + 1, wins = wins + $2 WHERE id = $3",
+        [r.delta, r.win ? 1 : 0, r.userId]
+      );
+    }
+
+    await pool.query(
+      `UPDATE auth.users AS u
+       SET rank = ranked.rnk
+       FROM (
+         SELECT id, RANK() OVER (ORDER BY score DESC, id ASC) AS rnk
+         FROM auth.users
+       ) AS ranked
+       WHERE u.id = ranked.id`
+    );
+
+    await pool.query("COMMIT");
+    return res.json({ ok: true });
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    console.error(err);
+    return res.status(500).json({ error: "Database error" });
+  }
+});
+
 // ── FRIENDS ───────────────────────────────────────────────────────────────────
 // All friends routes receive X-User-Id from the gateway (injected after JWT validation)
 // req.headers['x-user-id'] is the authenticated user making the request

@@ -132,6 +132,8 @@ export default function ProfilePage() {
   if (status === "loading" || !profile) return <div className="flex min-h-screen items-center justify-center text-cyan-400 font-mono">RETRIEVING_USER_DATA...</div>;
   if (status === "error") return <div className="flex min-h-screen items-center justify-center text-red-500 font-mono">DATA_CORRUPTION_ERROR</div>;
 
+  const winRate = profile.matches === 0 ? "0.00%" : `${((profile.wins / profile.matches) * 100).toFixed(2)}%`;
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
@@ -160,15 +162,19 @@ export default function ProfilePage() {
           </button>
 
           {/* Avatar */}
-          <div className="mb-6 flex justify-center">
+          <div className="mb-6 relative flex items-center justify-center">
             <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-cyan-500/40 shadow-[0_0_20px_rgba(0,247,255,0.3)] overflow-hidden bg-black">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="User Profile" className="h-full w-full object-cover" />
               ) : null}
             </div>
+            <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-y-1/2 translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
+              <span className="text-[9px] uppercase tracking-[0.2em]">Rank</span>
+              <span className="text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
+            </div>
           </div>
 
-          <h1 className="neon-title text-4xl uppercase tracking-[0.16em] text-gridBlue">{profile.username}</h1>
+          <h1 className="neon-title text-4xl uppercase tracking-[0.16em] text-[color:var(--tron-text)]">{profile.username}</h1>
           <p className="mt-4 text-xs uppercase tracking-[0.24em] text-cyan-100/70">Grid Competitor</p>
 
           {/* Tabs */}
@@ -200,7 +206,7 @@ export default function ProfilePage() {
                 { icon: <Trophy size={18} />, label: "Wins", value: profile.wins },
                 { icon: <Cpu size={18} />, label: "Matches", value: profile.matches },
                 { icon: <Zap size={18} />, label: "Score", value: profile.score },
-                { icon: <Crown size={18} />, label: "Rank", value: `#${profile.rank}` },
+                { icon: <Crown size={18} />, label: "Win Rate", value: winRate },
               ].map(({ icon, label, value }) => (
                 <div key={label} className="rounded-xl border border-cyan-300/30 bg-cyan-950/10 p-6 backdrop-blur-sm transition-transform hover:scale-105">
                   <div className="mb-2 flex items-center justify-center gap-2 text-cyan-400">
