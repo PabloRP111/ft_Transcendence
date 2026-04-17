@@ -46,21 +46,18 @@ export async function refresh() {
     credentials: "include"
   });
 
-  // If the refresh fails (expired or missing cookie), notify the app to redirect to login
-  if (res.status === 401) {
-    window.dispatchEvent(new Event("session-expired"));
-    throw new Error("Session expired");
+  if (!res.ok) {
+    // cualquier fallo se trata como "no sesión", NO error
+    return null;
   }
 
-  if (!res.ok) throw new Error("Could not refresh session");
-  
   return res.json();
 }
 
-/**
- * LOGOUT (Clears session and cookies)
- */
+// LOGOUT
 export async function logout() {
-  // Using the apiFetch helper to maintain consistency with the rest of the protected API
-  return apiFetch("/auth/logout", { method: "POST" });
+  await fetch(`${BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include"
+  });
 }
