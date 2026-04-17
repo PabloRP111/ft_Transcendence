@@ -1,9 +1,12 @@
 import { motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UserRound, Heart } from "lucide-react";
 import aiAvatar from "../assets/ai_profile.jpg";
 import TronCanvas from "../components/TronCanvas";
 import { useTronBackendMatch } from "../hooks/useTronMatchAPI";
+import { getCurrentUser, getImgById } from "../api/users";
+import { useAuth } from "../context/AuthContext";
+import { decodeToken } from "../utils/auth";
 
 function Lives({ lives, maxLives }) {
   return (
@@ -29,20 +32,56 @@ function Lives({ lives, maxLives }) {
 }
 
 export default function TronDuelArena() {
-  const { config, state, matchResult, sendMove, restartMatch } = useTronBackendMatch();
+  const { config, state, matchResult, sendMove } = useTronBackendMatch();
   const engineRef = useRef(state);
 
-  useEffect(() => { engineRef.current = state }, [state]);
+  const { isAuthenticated, accessToken } = useAuth();
 
-  // Keyboard input
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [username, setUsername] = useState("");
+
   useEffect(() => {
-    if (!config || !state)
-      return;
+    engineRef.current = state;
+  }, [state]);
+
+  // Loda data only if isAuth
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken) return;
+
+    let objectUrl = null;
+
+    async function load() {
+      try {
+        const user = await getCurrentUser();
+
+        if (!user?.id) return;
+
+        setUsername(user.username);
+
+        const blob = await getImgById(user.id);
+        objectUrl = URL.createObjectURL(blob);
+        setAvatarUrl(objectUrl);
+      } catch (err) {
+        console.error("avatar load failed", err);
+      }
+    }
+
+    load();
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [isAuthenticated, accessToken]);
+
+  // Input 
+  useEffect(() => {
+    if (!config || !state) return;
 
     const handleKeyDown = (event) => {
       const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
       const nextDirection = config.playerKeymap[key];
       if (!nextDirection) return;
+
       event.preventDefault();
       sendMove(1, nextDirection);
     };
@@ -56,7 +95,6 @@ export default function TronDuelArena() {
 
   const player1 = state?.players[0];
   const player2 = state?.players[1];
-
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
@@ -72,22 +110,27 @@ export default function TronDuelArena() {
         <motion.section
           initial={{ x: -200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.7 }}
           className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur"
         >
-          <motion.div
-            animate={{ y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 1.4 }}
-            className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]"
-          >
-            <UserRound size={50} />
-          </motion.div>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff] overflow-hidden">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound size={50} />
+            )}
+          </div>
 
           <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
-            {player1?.name ?? "Player"}
+            {username || "Player 1"}
           </h2>
 
-          <Lives lives={player1?.lives ?? config.startingLives} maxLives={config.startingLives} />
+          <Lives
+            lives={player1?.lives ?? config.startingLives}
+            maxLives={config.startingLives}
+          />
 
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
             Matches Won {state?.matchesWon?.[0] ?? 0}
@@ -96,53 +139,33 @@ export default function TronDuelArena() {
 
         {/* ARENA */}
         <div className="flex flex-col items-center gap-10">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]"
-          >
-            <motion.div
-              className="absolute inset-0 rounded-xl"
-              animate={{
-                boxShadow: ["0 0 20px #00f7ff", "0 0 60px #00f7ff", "0 0 20px #00f7ff"],
-              }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
-
+          <div className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]">
             <TronCanvas engineState={state} config={config} />
 
-            {/* Overlays */}
             {matchResult && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md border border-cyan-500/30"
-              >
-                {/* Título con efecto Neón */}
-                <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100 mb-12">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
+                <h2 className="text-5xl font-bold uppercase text-cyan-100 mb-12">
                   {matchResult === "DRAW" ? "DRAW" : `${matchResult} WINS`}
                 </h2>
 
-                {/* Contenedor de botones */}
                 <div className="flex gap-6">
                   <button
-                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold"
                     onClick={() => window.location.reload()}
+                    className="px-6 py-3 border border-cyan-400 text-cyan-50"
                   >
                     Rematch
                   </button>
-                  
+
                   <button
-                    className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold"
                     onClick={() => window.location.href = "/"}
+                    className="px-6 py-3 border border-cyan-400 text-cyan-50"
                   >
                     Back to Home
                   </button>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </motion.div>
+          </div>
 
           <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/75">
             Controls: WASD or Arrow keys
@@ -153,31 +176,27 @@ export default function TronDuelArena() {
         <motion.section
           initial={{ x: 200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.7 }}
           className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur"
         >
-          <motion.div
-            animate={{ y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 1.4 }}
-            className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]"
-          >
-            <div className="h-24 w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
-              <img
-                src={aiAvatar}
-                alt="AI Avatar"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </motion.div>
+          <div className="h-24 w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
+            <img
+              src={aiAvatar}
+              alt="AI Avatar"
+              className="h-full w-full object-cover"
+            />
+          </div>
 
           <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
-            {player2?.name ?? "AI_CORE"}
+            {player2?.name || "AI_CORE"}
           </h2>
 
-          <Lives lives={player2?.lives ?? config.startingLives} maxLives={config.startingLives} />
+          <Lives
+            lives={player2?.lives ?? config.startingLives}
+            maxLives={config.startingLives}
+          />
 
           <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
-            Matches Won {state?.matchesWon?.[1] ?? 0} 
+            Matches Won {state?.matchesWon?.[1] ?? 0}
           </p>
         </motion.section>
       </main>

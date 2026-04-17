@@ -8,6 +8,7 @@ import Navbar from "../components/Navbar";
 import { findMatch } from "../api/game";
 import { createConversation, postSystemMessage } from "../api/chat";
 import { decodeToken, getStoredToken } from "../utils/auth";
+import { getImgById } from "../api/users";
 
 function MatchmakingLoader() {
   return (
@@ -63,14 +64,12 @@ function Lives({ lives, maxLives }) {
 
 export default function TronPvpArena() {
   const location = useLocation();
-  // If navigated here from a game invite, matchId is in route state — skip matchmaking
+  const [avatars, setAvatars] = useState({});
   const [matchId, setMatchId] = useState(location.state?.matchId ?? null);
   const { config, state, matchResult, sendMove } = useTronPvP(matchId);
   const isInviteGame = !!location.state?.matchId;
 
-  // If the user is already on this page and accepts a new invite, React Router
-  // won't remount the component — location.state updates but the useState
-  // initializer above won't re-run. Sync it manually.
+  
   useEffect(() => {
     const incoming = location.state?.matchId;
     if (incoming && incoming !== matchId) {
@@ -80,7 +79,7 @@ export default function TronPvpArena() {
 
   const ready = state?.status === "playing";
 
-  // MATCHMAKING — skipped when matchId is already set (e.g. from invite)
+  // MATCHMAKING
   useEffect(() => {
     if (matchId) return;
 
@@ -96,7 +95,7 @@ export default function TronPvpArena() {
     initMatchmaking();
   }, []);
 
-  // POST MATCH RESULT TO DM — invite games only, Player 1 only
+  // POST MATCH RESULT TO DM
   useEffect(() => {
     if (!matchResult || !state || !isInviteGame) return;
 
@@ -144,6 +143,37 @@ export default function TronPvpArena() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [config, state, sendMove]);
 
+  useEffect(() => {
+    if (!state?.players) return;
+
+    let urls = [];
+
+    async function loadAvatars() {
+      const entries = await Promise.all(
+        state.players.map(async (p) => {
+          if (!p?.userId) return [p?.userId, null];
+
+          try {
+            const blob = await getImgById(p.userId);
+            const url = URL.createObjectURL(blob);
+            urls.push(url);
+            return [p.userId, url];
+          } catch {
+            return [p.userId, null];
+          }
+        })
+      );
+
+      setAvatars(Object.fromEntries(entries));
+    }
+
+    loadAvatars();
+
+    return () => {
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [state?.players]);
+
   const isLoading =
     !matchId ||
     !state ||
@@ -185,7 +215,14 @@ export default function TronPvpArena() {
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
-                    <UserRound size={50} className="text-cyan-400" />
+                    {avatars[state.players[0]?.userId] ? (
+                      <img
+                        src={avatars[state.players[0]?.userId]}
+                        className="h-full w-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <UserRound size={50} className="text-cyan-400" />
+                    )}
                   </div>
                   <div className="absolute -bottom-2 right-0 rounded bg-cyan-500 px-2 py-0.5 text-[10px] font-bold text-black">P1</div>
                 </div>
@@ -252,7 +289,14 @@ export default function TronPvpArena() {
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-pink-500/40 shadow-[0_0_40px_#ff007f]">
-                    <UserRound size={50} className="text-pink-500" />
+                    {avatars[state.players[1]?.userId] ? (
+                      <img
+                        src={avatars[state.players[1]?.userId]}
+                        className="h-full w-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <UserRound size={50} className="text-cyan-400" />
+                    )}
                   </div>
                   <div className="absolute -bottom-2 left-0 rounded bg-pink-500 px-2 py-0.5 text-[10px] font-bold text-black">P2</div>
                 </div>
