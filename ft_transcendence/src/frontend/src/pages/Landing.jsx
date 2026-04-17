@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"; // Añade esto
 import { motion } from "framer-motion";
 import { Cpu, Trophy } from "lucide-react";
 import Footer from "../components/Footer.jsx";
@@ -5,6 +6,7 @@ import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
 import ChatModule from "../components/ChatModule.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { apiFetch } from "../api/client";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -32,6 +34,26 @@ const itemVariants = {
 export default function GridLanding() {
   const { isAuthenticated, loading } = useAuth();
 
+  const [topPlayers, setTopPlayers] = useState([]);
+  const [rankingLoading, setRankingLoading] = useState(true);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      apiFetch("/ranking")
+        .then((data) => {
+          if (Array.isArray(data)) {
+            const sorted = [...data].sort((a, b) => (b.score || 0) - (a.score || 0));
+            setTopPlayers(sorted);
+          }
+          setRankingLoading(false);
+        })
+        .catch((err) => {
+          console.error("[ranking] error:", err);
+          setRankingLoading(false);
+        });
+    }
+  }, [isAuthenticated]);
+
   return (
     <div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       
@@ -58,34 +80,37 @@ export default function GridLanding() {
       {!loading && isAuthenticated && (
         <aside className="hidden lg:flex fixed right-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
           <div className="w-full h-[70vh] max-h-[600px] neon-panel bg-black/20 backdrop-blur-sm p-4 flex flex-col">
-            <Trophy className="mx-auto mb-4" size={32} />
+            <Trophy className="mx-auto mb-4 text-yellow-500" size={32} />
             <h2 className="text-center text-cyan-300 uppercase tracking-widest mb-4">
               Top Players
             </h2>
 
-            <div className="flex-1 overflow-y-auto space-y-2">
-              {/* MOCK DATA */}
-              {[
-                { name: "prosas-p", score: 1200 },
-                { name: "mzuloaga", score: 1100 },
-                { name: "aamoros", score: 980 },
-                { name: "jotrujil", score: 870 },
-                { name: "femoreno", score: -3 },
-              ].map((player, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center px-3 py-2 rounded-md border border-cyan-500/20 bg-black/30"
-                >
-                  <span className="text-cyan-100 text-sm">
-                    #{index + 1} {player.name}
-                  </span>
-                  <span className="text-cyan-400 text-sm">
-                    {player.score}
-                  </span>
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+              {rankingLoading ? (
+                <div className="text-center text-[10px] text-cyan-500 animate-pulse mt-10">
+                  LOADING_RANKING...
                 </div>
-              ))}
+              ) : topPlayers.length > 0 ? (
+                topPlayers.map((player, index) => (
+                  <div
+                    key={player.id || index}
+                    className="flex justify-between items-center px-3 py-2 rounded-md border border-cyan-500/20 bg-black/30 hover:border-cyan-400/50 transition-all"
+                  >
+                    <span className="text-cyan-100 text-sm">
+                      <span className="text-cyan-600 mr-2">#{index + 1}</span>
+                      {player.username}
+                    </span>
+                    <span className="text-cyan-400 text-sm font-bold">
+                      {player.score} <span className="text-[9px] text-cyan-800">PTS</span>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-[10px] text-cyan-700 mt-10">
+                  NO_RECORDS_FOUND
+                </div>
+              )}
             </div>
-
           </div>
         </aside>
       )}

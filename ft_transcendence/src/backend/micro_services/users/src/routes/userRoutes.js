@@ -138,6 +138,23 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// ── RANKING ──────────────────────────────────────────────────────────────────
+// GET /ranking — list top 10 players by score
+router.get("/ranking", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, username, score, wins, rank 
+       FROM auth.users 
+       ORDER BY score DESC, id ASC 
+       LIMIT 10`
+    );
+    res.json(result.rows || []);
+  } catch (err) {
+    console.error("[ranking] Database Error Details:", err.message);
+    res.status(500).json({ error: "Database error", details: err.message });
+  }
+});
+
 // UPDATE USER
 router.put("/:id", async (req, res) => {
   const { username, email, password } = req.body;

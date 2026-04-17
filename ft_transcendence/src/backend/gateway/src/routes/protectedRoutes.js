@@ -176,6 +176,21 @@ router.post("/friends/request/:targetId",   authMiddleware, (req, res) => friend
 router.post("/friends/accept/:requesterId", authMiddleware, (req, res) => friendsProxy(req, res, `/friends/accept/${req.params.requesterId}`, "POST"));
 router.post("/friends/decline/:requesterId",authMiddleware, (req, res) => friendsProxy(req, res, `/friends/decline/${req.params.requesterId}`, "POST"));
 router.delete("/friends/:friendId",         authMiddleware, (req, res) => friendsProxy(req, res, `/friends/${req.params.friendId}`, "DELETE"));
+// GET RANKING: Fetch top players ranking
+router.get("/ranking", async (req, res) => {
+  try {
+    const response = await fetch(`${USERS_SERVICE}/ranking`);
+    const data = await response.json().catch(() => ({}));
 
+    if (!response.ok) {
+      return res.status(response.status).json(data);
+    }
+
+    return res.json(data);
+  } catch (error) {
+    console.error("/ranking fetch failed:", error);
+    return res.status(503).json({ error: "Service Unavailable" });
+  }
+});
 
 export default router;
