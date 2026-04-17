@@ -122,8 +122,10 @@ export function stepSimulation(state) {
       state.matchOver = true;
       const winner = state.players.find(p => p.lives > 0);
       if (winner) {
+        const loser = state.players.find(p => p.lives <= 0);
         state.winner = winner;
         state.matchesWon[winner.id - 1]++;
+        
       }
     }
   }

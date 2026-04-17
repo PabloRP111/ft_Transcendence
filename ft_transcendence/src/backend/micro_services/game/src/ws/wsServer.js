@@ -12,6 +12,41 @@ async function fetchUser(userId) {
   return res.json();
 }
 
+async function postMatchResult(results) {
+  if (!results.length)
+    return;
+
+  const res = await fetch(`${USERS_SERVICE_URL}/match-result`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ results })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Failed to update scores:", res.status, text);
+  }
+}
+
+function buildScoreResults(state) {
+  const players = state.players.filter(p => p.userId);
+  if (players.length < 2)
+    return [];
+
+  if (state.winner) {
+    const winner = players.find(p => p.id === state.winner.id);
+    const loser = players.find(p => p.id !== state.winner.id);
+    const results = [];
+
+    if (winner) results.push({ userId: winner.userId, delta: 100, win: true });
+    if (loser) results.push({ userId: loser.userId, delta: -50, win: false });
+
+    return results;
+  }
+
+  return players.map(p => ({ userId: p.userId, delta: 50, win: false }));
+}
+
 export function verifyAccessToken(token) {
   return jwt.verify(token, ACCESS_SECRET);
 }
@@ -103,16 +138,20 @@ export function initSocket(io) {
       if (!anyConnected) {
         state.status = "waiting";
       }
+
+      if (matchId) {
+        socket.leave(matchId);
+      }
     });
   });
 
-  setInterval(() => {
+  setInterval(async () => {
     const matches = getAllMatches();
 
-    Object.entries(matches).forEach(([matchId, state]) => {
+    for (const [matchId, state] of Object.entries(matches)) {
 
-      if (state.mode !== "pvp") return;
-      if (state.status !== "playing") return;
+      if (state.mode !== "pvp") continue;
+      if (state.status !== "playing") continue;
 
       stepSimulation(state);
 
@@ -129,9 +168,15 @@ export function initSocket(io) {
       game.to(matchId).emit("state_update", state);
 
       if (state.matchOver) {
+        if (!state._scoreCommitted) {
+          state._scoreCommitted = true;
+          const results = buildScoreResults(state);
+          await postMatchResult(results);
+        }
+        game.in(matchId).disconnectSockets(true);
         deleteMatch(matchId);
       }
-    });
+    }
 
   }, 80);
 }
