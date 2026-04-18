@@ -57,6 +57,8 @@ export default function ChatModule() {
   const [dmFriendStatus, setDmFriendStatus] = useState("none");
   // Timestamp the OTHER participant last read this DM (null for channels or unread)
   const [otherReadAt, setOtherReadAt] = useState(null);
+  // Set of conversation IDs where there is a block in either direction
+  const [blockedConvIds, setBlockedConvIds] = useState(new Set());
 
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
@@ -179,6 +181,27 @@ export default function ChatModule() {
       .catch(console.error);
   }, [activeConversationId]);
 
+  // ── Compute blocked status for all DMs (for InboxView Swords button) ────────
+  useEffect(() => {
+    const dmConvs = conversations.filter(c => c.type === "private");
+    if (dmConvs.length === 0) { setBlockedConvIds(new Set()); return; }
+
+    Promise.all(
+      dmConvs.map(async (conv) => {
+        const otherId = conv.participants?.[0]?.id;
+        if (!otherId) return null;
+        try {
+          const { status } = await getFriendStatus(otherId);
+          return (status === "blocked" || status === "blocked_by") ? conv.id : null;
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      setBlockedConvIds(new Set(results.filter(Boolean)));
+    });
+  }, [conversations]);
+
   // ── Check friend/block status when opening a DM ──────────────────────────
   useEffect(() => {
     if (!activeConversationId) { setDmIsBlocked(false); setDmFriendStatus("none"); return; }
@@ -290,6 +313,7 @@ export default function ChatModule() {
             conversations={conversations}
             activeConversationId={activeConversationId}
             unreadIds={unreadIds}
+            blockedConvIds={blockedConvIds}
             onOpenConversation={openConversation}
             onNavigate={setView}
             onLeaveChannel={async (convId) => {

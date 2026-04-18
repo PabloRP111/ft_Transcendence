@@ -8,6 +8,7 @@ export default function InboxView({
   conversations,
   activeConversationId,
   unreadIds,
+  blockedConvIds = new Set(),
   onOpenConversation,
   onNavigate,
   onLeaveChannel,
@@ -99,7 +100,7 @@ export default function InboxView({
                     {convDisplayName(conv)}
                   </span>
                 </div>
-                {conv.type === "private" && isOnline && (
+                {conv.type === "private" && isOnline && !blockedConvIds.has(conv.id) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onGameInvite?.(conv); }}
                     className="flex-shrink-0 text-cyan-100/20 hover:text-cyan-300 transition-colors"
