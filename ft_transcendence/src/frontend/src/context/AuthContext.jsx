@@ -42,14 +42,21 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      const data = await refresh();
+      try {
+        const data = await refresh();
 
-      if (data?.accessToken) {
-        setStoredToken(data.accessToken);
-        setAccessToken(data.accessToken);
-      } else {
+        if (data?.accessToken) {
+          setStoredToken(data.accessToken);
+          setAccessToken(data.accessToken);
+        } else {
+          removeStoredToken();
+          setAccessToken(null);
+        }
+      } catch {
         removeStoredToken();
         setAccessToken(null);
+      } finally {
+        setLoading(false);
       }
     };
 
