@@ -5,7 +5,7 @@ import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck,
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getUserById, getUserByUsername } from "../api/users";
-import { getFriendStatus, sendFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
+import { getFriendStatus, sendFriendRequest, acceptFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
 import { getStoredToken, decodeToken } from "../utils/auth";
 import { useSocket } from "../context/SocketContext";
@@ -55,6 +55,9 @@ export default function UserProfile() {
       if (friendStatus === "none") {
         await sendFriendRequest(profile.id);
         setFriendStatus("pending_sent");
+      } else if (friendStatus === "pending_received") {
+        await acceptFriendRequest(profile.id);
+        setFriendStatus("accepted");
       } else if (friendStatus === "accepted") {
         await removeFriend(profile.id);
         setFriendStatus("none");

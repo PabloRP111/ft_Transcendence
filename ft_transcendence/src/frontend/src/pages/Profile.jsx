@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus, Swords } from "lucide-react";
+import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus, Swords, UserCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser, searchUsers, getImgById } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getBlockedUsers } from "../api/friends";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getBlockedUsers, getFriendStatus, removeFriend } from "../api/friends";
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
@@ -66,6 +66,12 @@ export default function ProfilePage() {
     };
   }, [loading, isAuthenticated]);
 
+  // Fetch pending requests on mount so the badge shows without visiting the Social tab first
+  useEffect(() => {
+    if (loading || !isAuthenticated) return;
+    getPendingRequests().then(setPending).catch(() => {});
+  }, [loading, isAuthenticated]);
+
   useEffect(() => {
     if (tab !== "Social") return;
     // Use individual catches so one failing endpoint doesn't wipe all sections
@@ -113,7 +119,7 @@ export default function ProfilePage() {
       // Enrich each user result with their relationship status so the UI
       // can show the correct button (Add / Pending / Friends / Blocked / Unavailable)
       const enriched = await Promise.all(
-        users.map(async (u) => {
+        users.filter((u) => u.username !== profile.username).map(async (u) => {
           try {
             const { status } = await getFriendStatus(u.id);
             return { ...u, friendStatus: status };
@@ -254,13 +260,44 @@ export default function ProfilePage() {
                               <div className="flex gap-2">
                                 {/* Friend action button — varies by relationship status */}
                                 {fs === "accepted" && (
-                                  <span className="text-[9px] uppercase tracking-widest text-green-400/70">Friends</span>
+                                  <span className="flex items-center text-green-400/70" title="Friends">
+                                    <UserCheck size={14} />
+                                  </span>
                                 )}
                                 {fs === "pending_sent" && (
                                   <span className="text-[9px] uppercase tracking-widest text-yellow-400/70">Pending</span>
                                 )}
                                 {fs === "pending_received" && (
-                                  <span className="text-[9px] uppercase tracking-widest text-cyan-400/70">Requested you</span>
+                                  <>
+                                    <button
+                                      onClick={async () => {
+                                        await handleAccept(u.id);
+                                        setSocialResults((prev) => ({
+                                          ...prev,
+                                          users: prev.users.map((x) =>
+                                            x.id === u.id ? { ...x, friendStatus: "accepted" } : x
+                                          ),
+                                        }));
+                                      }}
+                                      className="text-[9px] uppercase tracking-widest border border-green-500/40 text-green-400 px-2 py-1 rounded hover:bg-green-500/10 transition-colors"
+                                    >
+                                      Accept
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        await handleDecline(u.id);
+                                        setSocialResults((prev) => ({
+                                          ...prev,
+                                          users: prev.users.map((x) =>
+                                            x.id === u.id ? { ...x, friendStatus: "none" } : x
+                                          ),
+                                        }));
+                                      }}
+                                      className="text-[9px] uppercase tracking-widest border border-red-500/40 text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                                    >
+                                      Decline
+                                    </button>
+                                  </>
                                 )}
                                 {(fs === "blocked" || fs === "blocked_by") && (
                                   <span className="text-[9px] uppercase tracking-widest text-red-400/50">
@@ -284,6 +321,16 @@ export default function ProfilePage() {
                                 {fs !== "blocked" && fs !== "blocked_by" && (
                                   <button onClick={() => navigate(`/?dm=${u.id}`)} className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors">
                                     <MessageSquare size={11} /> DM
+                                  </button>
+                                )}
+                                {/* Challenge button — only if online and no block */}
+                                {fs !== "blocked" && fs !== "blocked_by" && onlineUsers.has(String(u.id)) && (
+                                  <button
+                                    onClick={() => sendGameInvite(socketRef, u.id, u.username)}
+                                    className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded hover:bg-yellow-500/10 transition-colors"
+                                    title="Challenge to a game"
+                                  >
+                                    <Swords size={11} />
                                   </button>
                                 )}
                               </div>
@@ -335,7 +382,7 @@ export default function ProfilePage() {
               )}
 
               {/* Pending requests */}
-              {pending.length > 0 && (
+              {!socialSearch.trim() && pending.length > 0 && (
                 <div>
                   <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Pending requests</p>
                   <div className="space-y-2">
@@ -359,11 +406,11 @@ export default function ProfilePage() {
               )}
 
               {/* Friends list */}
-              {friends.length === 0 && pending.length === 0 && (
+              {!socialSearch.trim() && friends.length === 0 && pending.length === 0 && (
                 <p className="text-center text-xs text-cyan-100/30 uppercase tracking-widest mt-8">No friends yet</p>
               )}
 
-              {friends.length > 0 && (
+              {!socialSearch.trim() && friends.length > 0 && (
                 <>
                   {/* Online friends */}
                   {friends.filter((f) => onlineUsers.has(String(f.id))).length > 0 && (
@@ -394,7 +441,7 @@ export default function ProfilePage() {
               )}
 
               {/* Blocked users */}
-              {blocked.length > 0 && (
+              {!socialSearch.trim() && blocked.length > 0 && (
                 <div>
                   <p className="text-[9px] uppercase tracking-widest text-red-500/50 mb-2">Blocked</p>
                   <div className="space-y-2">
@@ -417,32 +464,34 @@ export default function ProfilePage() {
               )}
 
               {/* Channels */}
-              <div>
-                <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Channels</p>
-                {channels.length === 0 ? (
-                  <p className="text-center text-xs text-cyan-100/30 uppercase tracking-widest mt-2">No channels joined</p>
-                ) : (
-                  <div className="space-y-2">
-                    {channels.map((c) => (
-                      <div key={c.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
-                        <button
-                          onClick={() => navigate(`/?channel=${c.id}`)}
-                          className="flex items-center gap-2 text-sm text-cyan-50 hover:text-cyan-300 transition-colors"
-                        >
-                          <Hash size={13} className="text-cyan-500/60" />
-                          {c.name}
-                        </button>
-                        <button
-                          onClick={() => handleLeaveChannel(c.id)}
-                          className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
-                        >
-                          <LogOut size={11} /> Leave
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {!socialSearch.trim() && (
+                <div>
+                  <p className="text-[9px] uppercase tracking-widest text-cyan-500/50 mb-2">Channels</p>
+                  {channels.length === 0 ? (
+                    <p className="text-center text-xs text-cyan-100/30 uppercase tracking-widest mt-2">No channels joined</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {channels.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between rounded-lg border border-cyan-500/20 bg-cyan-950/20 px-4 py-2">
+                          <button
+                            onClick={() => navigate(`/?channel=${c.id}`)}
+                            className="flex items-center gap-2 text-sm text-cyan-50 hover:text-cyan-300 transition-colors"
+                          >
+                            <Hash size={13} className="text-cyan-500/60" />
+                            {c.name}
+                          </button>
+                          <button
+                            onClick={() => handleLeaveChannel(c.id)}
+                            className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-red-500/30 text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                          >
+                            <LogOut size={11} /> Leave
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
