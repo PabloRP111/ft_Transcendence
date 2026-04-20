@@ -5,6 +5,7 @@ import { UserPlus, LogIn } from "lucide-react";
 import { login, register } from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import LightCycles from "../components/LightCycles";
+import { validateUsername, validateEmail, validatePassword } from "../utils/security.js";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,6 +28,26 @@ export default function RegisterPage() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setMsg("");
+
+    if (!email.trim() || !password.trim() || !username.trim()) {
+      setMsg("All fields are required");
+      return;
+    }
+    const userVal = validateUsername(username);
+    if (!userVal.isValid) {
+      setMsg(userVal.error);
+      return;
+    }
+    const emailVal = validateEmail(email);
+    if (!emailVal.isValid) {
+      setMsg(emailVal.error);
+      return;
+    }
+    const passVal = validatePassword(password);
+    if (!passVal.isValid) {
+      setMsg(passVal.error);
+      return;
+    }
 
     try {
       const res = await register({ email, username, password });

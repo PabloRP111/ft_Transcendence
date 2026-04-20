@@ -39,8 +39,6 @@ export function useTronPvP(matchId) {
 
         socket.on("connect", () => {
           setIsConnected(true);
-          console.log("CONNECTED", socket.id);
-
           socket.emit("join_match", { matchId });
         });
 

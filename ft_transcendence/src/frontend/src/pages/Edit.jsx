@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Save, ArrowLeft } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
-//import userimage from "../assets/userimage.png";
 import { useAuth } from "../context/AuthContext";
 import { editUser, getCurrentUser, getImgById, uploadAvatar } from "../api/users";
+import {validateUsername, validateEmail, validatePassword} from "../utils/security.js";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -38,6 +38,7 @@ export default function EditProfilePage() {
   const avatarUrlRef = useRef(null);
 
   const [form, setForm] = useState({ username: "", email: "", password: "", avatar: "" });
+  const [msg, setMsg] = useState("");
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
@@ -72,6 +73,8 @@ export default function EditProfilePage() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    if (msg)
+      setMsg("");
   };
 
   const handleAvatarClick = () => {
@@ -105,32 +108,54 @@ export default function EditProfilePage() {
  
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Saving profile:", form);
+    setMsg("");
+
+    const username = form.username.trim();
+    const email = form.email.trim();
+    if (!username || !email) {
+      setMsg("Username and email are required");
+      return;
+    }
+    const userVal = validateUsername(username);
+    if (!userVal.isValid)
+      return setMsg(userVal.error);
+    const emailVal = validateEmail(email);
+    if (!emailVal.isValid)
+      return setMsg(emailVal.error);
+    if (form.password) {
+      const passVal = validatePassword(form.password);
+      if (!passVal.isValid)
+        return setMsg(passVal.error);
+    }
 
     try {
-      if (accessToken) {
-        const currentUser = await editUser(accessToken, form);
+      if (!accessToken)
+        return;
 
-        if (currentUser) {
-          setForm({
-            username: currentUser.username || form.username,
-            email: currentUser.email || form.email,
-            password: "",
-          });
+      const payload = {
+        username,
+        email,
+        password: form.password || undefined,
+        avatar: form.avatar,
+      };
 
-          if (currentUser.username) {
-            localStorage.setItem("username", currentUser.username);
-          }
-
-          navigate("/profile"); 
-        }
+      const currentUser = await editUser(accessToken, payload);
+      if (currentUser) {
+        setMsg("");
+        setForm({
+          username: currentUser.username || username,
+          email: currentUser.email || email,
+          password: "",
+          avatar: form.avatar,
+        });
+        localStorage.setItem("username", currentUser.username);
+        navigate("/profile");
       }
     } catch (err) {
-      console.error("Failed to update user profile:", err);
+      setMsg("Update failed: " + err.message);
     }
   };
   
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       {/* Background */}
@@ -207,16 +232,14 @@ export default function EditProfilePage() {
               onChange={handleChange}
               className="w-full rounded-lg border border-cyan-300/30 bg-black/40 p-3 text-sm text-cyan-100 outline-none focus:border-cyan-300"
             />
-
             <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-cyan-300/30 bg-black/40 p-3 text-sm text-cyan-100 outline-none focus:border-cyan-300"
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-cyan-300/30 bg-black/40 p-3 text-sm text-cyan-100 outline-none focus:border-cyan-300"
             />
-
             <input
               type="password"
               name="password"
@@ -232,6 +255,11 @@ export default function EditProfilePage() {
             >
               <Save size={16} /> Save Changes
             </button>
+            {msg && (
+              <p className="mt-4 text-xs uppercase tracking-[0.2em] text-cyan-100/70">
+                {msg}
+              </p>
+            )}
           </motion.form>
         </motion.section>
       </motion.main>

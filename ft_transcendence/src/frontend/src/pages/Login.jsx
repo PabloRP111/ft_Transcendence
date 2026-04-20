@@ -5,6 +5,7 @@ import { LogIn, UserPlus, LogOut } from "lucide-react";
 import { login, logout } from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import LightCycles from "../components/LightCycles";
+import { validateEmail, validatePassword } from "../utils/security.js";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -30,6 +31,21 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setMsg("");
+
+    if (!email.trim() || !password.trim()) {
+      setMsg("All fields are required");
+      return;
+    }
+    const emailVal = validateEmail(email);
+    if (!emailVal.isValid) {
+      setMsg(emailVal.error);
+      return;
+    }
+    const passVal = validatePassword(password);
+    if (!passVal.isValid) {
+      setMsg(passVal.error);
+      return;
+    }
 
     try {
       const data = await login({ email, password });

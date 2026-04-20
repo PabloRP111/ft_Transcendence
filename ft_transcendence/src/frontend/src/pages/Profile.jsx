@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
 import { useSocket } from "../context/SocketContext";
 import { sendGameInvite } from "../utils/gameInvite";
+import { sanitizeSearch } from "../utils/security"
 
 const TABS = ["Stats", "Social"];
 
@@ -106,7 +107,7 @@ export default function ProfilePage() {
   };
 
   const handleSocialSearch = (e) => {
-    const q = e.target.value;
+    const q = sanitizeSearch(e.target.value);
     setSocialSearch(q);
     clearTimeout(socialSearchTimer.current);
     if (!q.trim()) { setSocialResults({ users: [], channels: [] }); return; }

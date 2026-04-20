@@ -261,7 +261,7 @@ export default function ChatModule() {
   };
 
   const handleSearchChange = (e) => {
-    const q = e.target.value;
+    
     setSearchTerm(q);
     clearTimeout(searchTimerRef.current);
 

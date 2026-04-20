@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const loginUser = (token) => {
     setStoredToken(token);
     setAccessToken(token);
+    localStorage.setItem("hasRefreshToken", "1");
   };
 
   // LOGOUT
@@ -24,10 +25,11 @@ export function AuthProvider({ children }) {
     try {
       await apiLogout();
     } catch (err) {
-      console.error("Logout failed:", err);
+
     } finally {
       removeStoredToken();
       setAccessToken(null);
+      localStorage.removeItem("hasRefreshToken");
     }
   };
 
@@ -35,9 +37,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = getStoredToken();
+      const hasRefresh = localStorage.getItem("hasRefreshToken");
 
       if (storedToken && !isTokenExpired(storedToken)) {
         setAccessToken(storedToken);
+        setLoading(false);
+        return;
+      }
+
+      if (!hasRefresh) {
+        setAccessToken(null);
         setLoading(false);
         return;
       }
@@ -51,6 +60,7 @@ export function AuthProvider({ children }) {
         } else {
           removeStoredToken();
           setAccessToken(null);
+          localStorage.removeItem("hasRefreshToken");
         }
       } catch {
         removeStoredToken();
@@ -68,6 +78,7 @@ export function AuthProvider({ children }) {
     const handleSessionExpired = () => {
       removeStoredToken();
       setAccessToken(null);
+      localStorage.removeItem("hasRefreshToken");
     };
 
     window.addEventListener("session-expired", handleSessionExpired);

@@ -68,11 +68,8 @@ export function useChat(
 
     const joinRoom = () => {
       socket.emit("joinConversation", { conversationId: String(activeConversationId) }, (res) => {
-        if (res?.ok) {
-          console.log(`[socket] room sync: ${activeConversationId}`);
-        } else {
+        if (!res?.ok)
           console.error("[socket] join error:", res?.error);
-        }
       });
     };
 
