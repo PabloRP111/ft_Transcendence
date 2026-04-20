@@ -2,8 +2,12 @@ Añadir perfiles de creadores al lanzar programa.
 
 Hacer sistema de reconexion.
 
-Probar inputs, sql injections, empty, XSS attemps
-
 Implement advanced search functionality with filters, sorting, and pagina-
 tion.Filtros al ranking, que solo salgan amigos, ordenar alfabeticamente y que si hay más resultados de el número que quepa en el componente, te haga un sistema de pasar de páginas.
+
+Terminar notificaciones chat.
+
+Mejorar motor de juego.
+
+Quitar console logs y console errors en la version de repo de 42.
 
