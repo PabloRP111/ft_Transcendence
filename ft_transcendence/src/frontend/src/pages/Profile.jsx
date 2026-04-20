@@ -107,27 +107,36 @@ export default function ProfilePage() {
   };
 
   const handleSocialSearch = (e) => {
-    const q = sanitizeSearch(e.target.value);
-    setSocialSearch(q);
+    const raw = e.target.value;
+    const q = sanitizeSearch(raw);
+
+    setSocialSearch(raw);
+
     clearTimeout(socialSearchTimer.current);
-    if (!q.trim()) { setSocialResults({ users: [], channels: [] }); return; }
+    if (!q.trim()) {
+      setSocialResults({ users: [], channels: [] });
+      return;
+    }
+    if (q.length < 2) 
+      return;
+
     socialSearchTimer.current = setTimeout(async () => {
       const [users, channels] = await Promise.all([
         searchUsers(q).catch(() => []),
         searchChannels(q).catch(() => []),
       ]);
 
-      // Enrich each user result with their relationship status so the UI
-      // can show the correct button (Add / Pending / Friends / Blocked / Unavailable)
       const enriched = await Promise.all(
-        users.filter((u) => u.username !== profile.username).map(async (u) => {
-          try {
-            const { status } = await getFriendStatus(u.id);
-            return { ...u, friendStatus: status };
-          } catch {
-            return { ...u, friendStatus: "none" };
-          }
-        })
+        users
+          .filter((u) => u.username !== profile.username)
+          .map(async (u) => {
+            try {
+              const { status } = await getFriendStatus(u.id);
+              return { ...u, friendStatus: status };
+            } catch {
+              return { ...u, friendStatus: "none" };
+            }
+          })
       );
 
       setSocialResults({ users: enriched, channels });

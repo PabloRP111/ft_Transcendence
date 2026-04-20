@@ -31,8 +31,7 @@ export function validateUsername(username) {
 // Avoid HTML basic injection
 export function sanitizeSearch(input) {
   return input
-    .replace(/[<>]/g, "")
-    .replace(/['"`;]/g, "")
     .trim()
-    .slice(0, 50);
+    .slice(0, 50)
+    .replace(/[\u0000-\u001F\u007F]/g, "");
 }

@@ -16,6 +16,7 @@ import InboxView from "./chat/InboxView";
 import ChatView from "./chat/ChatView";
 import SearchView from "./chat/SearchView";
 import CreateChannelView from "./chat/CreateChannelView";
+import { sanitizeSearch } from "../utils/security";
 
 /**
  * ChatModule — Top-level coordinator for the chat panel.
@@ -261,7 +262,7 @@ export default function ChatModule() {
   };
 
   const handleSearchChange = (e) => {
-    
+    const q = sanitizeSearch(e.target.value);
     setSearchTerm(q);
     clearTimeout(searchTimerRef.current);
 
