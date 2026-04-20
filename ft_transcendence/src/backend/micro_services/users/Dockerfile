@@ -6,6 +6,8 @@ COPY package*.json ./
 
 RUN npm install
 
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
 COPY src/ ./src/
 
 COPY assets/ ./assets/

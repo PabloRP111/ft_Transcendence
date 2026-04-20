@@ -10,6 +10,7 @@ build:
 up:
 	@echo "🚀 Starting containers..."
 	@$(COMPOSE) up --build -d
+	docker compose -f src/docker-compose.yml exec users sh -c "until nc -z postgres 5432; do sleep 1; done; node /app/src/seed.js"
 
 up-no-build:
 	@echo "🚀 Starting containers without rebuild..."
@@ -57,6 +58,6 @@ frontend:
 nginx:
 	@$(COMPOSE) exec nginx bash
 
-re: fclean all logs
+re: fclean all
 
 .PHONY: all re status build up up-no-build down reload fclean logs gateway users frontend nginx
