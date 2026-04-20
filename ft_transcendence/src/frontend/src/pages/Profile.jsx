@@ -110,7 +110,7 @@ export default function ProfilePage() {
     const raw = e.target.value;
     const q = sanitizeSearch(raw);
 
-    setSocialSearch(raw);
+    setSocialSearch(q);
 
     clearTimeout(socialSearchTimer.current);
     if (!q.trim()) {

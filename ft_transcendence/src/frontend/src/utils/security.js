@@ -33,5 +33,6 @@ export function sanitizeSearch(input) {
   return input
     .trim()
     .slice(0, 50)
-    .replace(/[\u0000-\u001F\u007F]/g, "");
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/[<>]/g, "");
 }

@@ -116,10 +116,14 @@ router.post("/login", async (req, res) => {
 // Query param: ?q=searchTerm
 // Returns: [{ id, username }]
 router.get("/search", async (req, res) => {
-  const { q } = req.query;
+  const q = req.query.q;
+  if (typeof q !== "string") {
+    return res.status(400).json({ error: "Invalid query type" });
+  }
 
-  if (!q || typeof q !== "string" || q.trim() === "") {
-    return res.status(400).json({ error: "Missing search query" });
+  const trimmed = q.trim();
+  if (!trimmed || trimmed.length < 2 || trimmed.length > 50) {
+    return res.status(400).json({ error: "Invalid query" });
   }
 
   try {
