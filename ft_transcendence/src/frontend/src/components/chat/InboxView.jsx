@@ -74,10 +74,8 @@ export default function InboxView({
           const hasUnread = unreadIds.has(conv.id) || unreadIds.has(String(conv.id));
           const isOnline = isDMOnline(conv);
 
-          // Dot priority: unread (orange) > online (green) > default (gray)
-          const dotClass = hasUnread
-            ? "bg-orange-400 shadow-[0_0_4px_rgba(251,146,60,0.8)]"
-            : isOnline
+          // Dot: green if online, gray otherwise
+          const dotClass = isOnline
             ? "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]"
             : "bg-gray-600";
 
@@ -99,6 +97,11 @@ export default function InboxView({
                   <span className="text-[11px] text-cyan-50 font-mono truncate">
                     {convDisplayName(conv)}
                   </span>
+                  {hasUnread && (
+                    <span className="flex-shrink-0 rounded-full bg-orange-500 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] text-white font-bold leading-none">
+                      1
+                    </span>
+                  )}
                 </div>
                 {conv.type === "private" && isOnline && !blockedConvIds.has(conv.id) && (
                   <button
