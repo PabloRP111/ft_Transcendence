@@ -8,6 +8,7 @@ import { searchUsers } from "../api/users";
 import { getFriendStatus, sendFriendRequest } from "../api/friends";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useSocket } from "../context/SocketContext";
 import { sendGameInvite } from "../utils/gameInvite";
 
 // Utilities & Views
@@ -41,6 +42,10 @@ export default function ChatModule() {
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [unreadIds, setUnreadIds] = useState(new Set());
 
+  // ── Send errors (rate limit, validation) ─────────────────────────────────
+  const [sendError, setSendError] = useState(null);
+  const sendErrorTimerRef = useRef(null);
+
   // ── Search & Channel Creation ─────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState({ users: [], channels: [] });
@@ -64,39 +69,97 @@ export default function ChatModule() {
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isInitializing = useRef(false);
+  // Ref so socket handlers always see the latest activeConversationId without stale closures
+  const activeConvIdRef = useRef(activeConversationId);
+  useEffect(() => { activeConvIdRef.current = activeConversationId; }, [activeConversationId]);
 
-  // ── WebSocket Logic ───────────────────────────────────────────────────────
-  const socketRef = useChat(activeConversationId, {
-    onNewMessage: (msg) => {
-      // Re-sort inbox based on latest message
-      setConversations((prev) => prev.map((c) =>
-        String(c.id) === String(msg.conversationId)
-          ? { ...c, lastMessageAt: msg.createdAt }
-          : c
-      ));
+  // ── WebSocket — room joining only (via useChat) ───────────────────────────
+  const socketRef = useChat(activeConversationId);
+  const { connected } = useSocket();
 
-      // Append if active, otherwise mark as unread
-      if (String(msg.conversationId) === String(activeConversationId)) {
+  // ── WebSocket — message/typing listeners (PresenceContext pattern) ─────────
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !connected) return;
+
+    const onNewMessage = (msg) => {
+      // If this is an echo of my own message, update lastOpened now (after the server
+      // round-trip) so that the server timestamp in lastMessageAt doesn't exceed the
+      // client timestamp saved at send time — which would cause a false unread badge.
+      if (String(msg.senderId) === String(myId)) {
+        saveLastOpened(myId, msg.conversationId);
+      }
+
+      setConversations((prev) => {
+        const known = prev.some((c) => String(c.id) === String(msg.conversationId));
+        if (!known) {
+          // This is the first message from a brand-new DM — refresh the list
+          // so the conversation appears in the inbox.
+          getConversations().then(setConversations).catch(console.error);
+          return prev;
+        }
+        return prev.map((c) =>
+          String(c.id) === String(msg.conversationId)
+            ? { ...c, lastMessageAt: msg.createdAt }
+            : c
+        );
+      });
+      if (String(msg.conversationId) === String(activeConvIdRef.current)) {
         setMessages((prev) => [...prev, msg]);
+        // If the message is from the other person and we're actively viewing the
+        // conversation, mark it as read immediately — both on the server (so the
+        // "Read" receipt appears for the sender) and in localStorage (so we don't
+        // get a false unread badge if we navigate away and come back).
+        if (String(msg.senderId) !== String(myId)) {
+          socketRef.current?.emit("markRead", { conversationId: String(activeConvIdRef.current) });
+          saveLastOpened(myId, msg.conversationId);
+        }
       } else {
         setUnreadIds((prev) => new Set(prev).add(msg.conversationId));
       }
-    },
-    // Update otherReadAt when the other participant reads the conversation
-    onMessageRead: ({ conversationId, userId, readAt }) => {
-      const myId = getMyIdFromToken();
-      if (String(userId) === String(myId)) return; // ignore my own read events
-      if (String(conversationId) === String(activeConversationId)) {
+    };
+
+    const onMessageRead = ({ conversationId, userId, readAt }) => {
+      if (String(userId) === String(getMyIdFromToken())) return;
+      if (String(conversationId) === String(activeConvIdRef.current)) {
         setOtherReadAt(readAt);
       }
-    },
-    onTypingStart: ({ userId }) => setTypingUsers((prev) => new Set(prev).add(userId)),
-    onTypingStop: ({ userId }) => setTypingUsers((prev) => {
-      const next = new Set(prev);
-      next.delete(userId);
-      return next;
-    }),
-  });
+    };
+
+    const onTypingStart = ({ userId }) =>
+      setTypingUsers((prev) => new Set(prev).add(userId));
+
+    const onTypingStop = ({ userId }) =>
+      setTypingUsers((prev) => { const n = new Set(prev); n.delete(userId); return n; });
+
+    const showSendError = (msg) => {
+      setSendError(msg);
+      clearTimeout(sendErrorTimerRef.current);
+      sendErrorTimerRef.current = setTimeout(() => setSendError(null), 4000);
+    };
+
+    const onMessageFailed = ({ error }) =>
+      showSendError(error === "content too long" ? "Message too long" : "Failed to send message");
+
+    const onRateLimitExceeded = ({ retryAfter }) =>
+      showSendError(`Slow down — try again in ${Math.ceil(retryAfter / 1000)}s`);
+
+    socket.on("newMessage", onNewMessage);
+    socket.on("messageRead", onMessageRead);
+    socket.on("typingStart", onTypingStart);
+    socket.on("typingStop", onTypingStop);
+    socket.on("messageFailed", onMessageFailed);
+    socket.on("rateLimitExceeded", onRateLimitExceeded);
+
+    return () => {
+      socket.off("newMessage", onNewMessage);
+      socket.off("messageRead", onMessageRead);
+      socket.off("typingStart", onTypingStart);
+      socket.off("typingStop", onTypingStop);
+      socket.off("messageFailed", onMessageFailed);
+      socket.off("rateLimitExceeded", onRateLimitExceeded);
+    };
+  }, [socketRef, connected]);
 
   // ── Initialization (Mount) ────────────────────────────────────────────────
   useEffect(() => {
@@ -345,6 +408,7 @@ export default function ChatModule() {
             isBlocked={dmIsBlocked}
             dmFriendStatus={dmFriendStatus}
             otherReadAt={otherReadAt}
+            sendError={sendError}
             onAddFriend={async () => {
               const otherId = activeConversation?.participants?.[0]?.id;
               if (!otherId) return;
@@ -358,7 +422,7 @@ export default function ChatModule() {
             }}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
-            onBack={() => setView("inbox")}
+            onBack={() => { setView("inbox"); setActiveConversationId(null); }}
             onLeaveChannel={async () => {
               await leaveChannel(activeConversationId);
               setConversations((prev) => prev.filter((c) => c.id !== activeConversationId));

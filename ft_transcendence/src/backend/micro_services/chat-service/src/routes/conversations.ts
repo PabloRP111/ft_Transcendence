@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/pool';
+import { getChatNamespace } from '../socket';
 
 const router = Router();
 
@@ -46,6 +47,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     await client.query('BEGIN');
 
     let conversation: { id: number; type: string; name: string | null; is_public: boolean; description: string | null; created_at: string } | undefined;
+    // Track whether this is a brand-new conversation (vs. one that already existed).
+    // Used after COMMIT to notify the other participant's sockets in real time.
+    let isNew = false;
 
     /* 1. FIND_OR_CREATE_LOGIC: Force normalization to lowercase and trim spaces.
        This ensures 'Arena_General' and 'arena_general' resolve to the same ID.
@@ -95,6 +99,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         [type, normalizedName, isPublicVal, descriptionVal],
       );
       conversation = conversationResult.rows[0];
+      isNew = true;
     }
 
     /* 3. PARTICIPANT_SYNC: Add the user as a participant
@@ -123,6 +128,33 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
 
     await client.query('COMMIT');
+
+    // For brand-new private DMs: join the other participant's active sockets to
+    // the new room server-side, then notify their frontend to refresh conversations.
+    // This allows them to receive newMessage events immediately without a page reload.
+    if (isNew && type === 'private') {
+      const namespace = getChatNamespace();
+      if (namespace) {
+        for (const participantId of extraParticipants) {
+          const pid = parseInt(participantId, 10);
+          if (pid === creatorId) continue;
+
+          try {
+            // Join the participant's active sockets to the new room so that
+            // the first message sent by the creator will reach them immediately.
+            // We do NOT notify their frontend yet — the inbox will refresh
+            // automatically when the first newMessage event arrives.
+            const sockets = await namespace.in(`user-${pid}`).fetchSockets();
+            for (const s of sockets) {
+              s.join(String(conversation.id));
+            }
+          } catch (err) {
+            // Non-fatal: the participant will pick it up on next refresh
+            console.error(`[POST /conversations] failed to notify participant ${pid}:`, err);
+          }
+        }
+      }
+    }
 
     res.status(201).json({
       id: conversation.id,

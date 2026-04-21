@@ -14,6 +14,7 @@ export default function ChatView({
   isBlocked,
   dmFriendStatus,
   otherReadAt,
+  sendError,
   onAddFriend,
   onGameInvite,
   onTyping,
@@ -190,6 +191,11 @@ export default function ChatView({
         </div>
       ) : (
         <form onSubmit={onSendMessage} className="p-4 bg-[#0a0f1a] border-t border-cyan-300/10">
+          {sendError && (
+            <p className="text-[9px] text-red-400/80 font-mono mb-2 text-center tracking-wide">
+              {sendError}
+            </p>
+          )}
           <div className="relative group">
             <input
               type="text"

@@ -73,7 +73,7 @@ async function getUserConversationIds(userId: string): Promise<string[]> {
      WHERE user_id = $1`,
     [parseInt(userId, 10)],
   );
-  return result.rows.map((r) => r.conversation_id);
+  return result.rows.map((r) => String(r.conversation_id));
 }
 
 function hasStringField(payload: unknown, field: string): boolean {
@@ -346,6 +346,15 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
     });
 
     socket.on('disconnect', async () => {
+      // Clear any lingering typing indicator this socket may have left behind.
+      // We broadcast typingStop to every conversation room this socket was in,
+      // so viewers don't see a stuck "X is typing..." after a tab close or crash.
+      socket.rooms.forEach((room) => {
+        if (room !== socket.id && room !== `user-${userId}`) {
+          socket.to(room).emit('typingStop', { conversationId: room, userId });
+        }
+      });
+
       // If this user had a pending outgoing invite, cancel it
       const outgoing = pendingInvites.get(userId);
       if (outgoing) {
