@@ -203,6 +203,11 @@ export default function ChatModule() {
     });
   }, [conversations]);
 
+  // ── Clear typing state when switching conversations ───────────────────────
+  useEffect(() => {
+    setTypingUsers(new Set());
+  }, [activeConversationId]);
+
   // ── Check friend/block status when opening a DM ──────────────────────────
   useEffect(() => {
     if (!activeConversationId) { setDmIsBlocked(false); setDmFriendStatus("none"); return; }

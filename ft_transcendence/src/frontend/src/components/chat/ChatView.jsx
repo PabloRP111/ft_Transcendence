@@ -119,6 +119,15 @@ export default function ChatView({
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 flex flex-col-reverse gap-4 custom-scrollbar">
         <div /> {/* bottom spacer */}
 
+        {/* Typing indicator — first after spacer = visual bottom, just above input */}
+        {typingUsers.size > 0 && (
+          <div className="text-[9px] text-cyan-400/60 italic animate-pulse">
+            {isDM && activeConversation?.participants?.[0]?.username
+              ? `${activeConversation.participants[0].username} is typing...`
+              : "Someone is typing..."}
+          </div>
+        )}
+
         {[...messages].reverse().map((msg) => {
           // System messages (game notifications) render centered and in italics
           if (msg.type === 'system' || msg.senderId === null) {
@@ -165,12 +174,6 @@ export default function ChatView({
             </div>
           );
         })}
-
-        {typingUsers.size > 0 && (
-          <div className="text-[9px] text-cyan-400/60 italic animate-pulse">
-            Someone is typing...
-          </div>
-        )}
 
         {/* Last in DOM = top visually with flex-col-reverse */}
         <div className="text-[9px] text-cyan-100/30 uppercase tracking-[0.3em] text-center my-4">
