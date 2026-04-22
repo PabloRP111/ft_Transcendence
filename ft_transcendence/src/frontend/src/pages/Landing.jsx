@@ -139,7 +139,7 @@ export default function GridLanding() {
 
 			{/* ── RANKING SIDEBAR ── */}
 			{!loading && isAuthenticated && (
-				<aside className="flex fixed right-4 sm:right-6 lg:right-8 top-24 bottom-12 z-40 items-center justify-center w-72 sm:w-80 xl:w-96">
+				<aside className="hidden lg:flex fixed right-4 sm:right-6 lg:right-8 top-24 bottom-12 z-40 items-center justify-center w-72 sm:w-80 xl:w-96">
 					<div className="w-full h-[70vh] max-h-[600px] neon-panel bg-black/20 backdrop-blur-sm p-4 flex flex-col">
 						<div className="grid grid-cols-[1fr_auto_1fr] items-center mb-4">
 							<div className="flex justify-start">
