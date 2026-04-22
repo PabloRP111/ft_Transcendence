@@ -143,14 +143,13 @@ router.get("/search", async (req, res) => {
 });
 
 // ── RANKING ──────────────────────────────────────────────────────────────────
-// GET /ranking — list top 10 players by score
+// GET /ranking — list all players by score
 router.get("/ranking", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, username, score, wins, rank 
        FROM auth.users 
-       ORDER BY score DESC, id ASC 
-       LIMIT 10`
+       ORDER BY score DESC, id ASC`
     );
     res.json(result.rows || []);
   } catch (err) {
