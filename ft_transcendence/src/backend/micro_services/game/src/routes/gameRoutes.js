@@ -1,22 +1,28 @@
 import express from "express";
 import { GRID_WIDTH, GRID_HEIGHT, CELL_SIZE, PLAYER_COLORS, TICK_MS, STARTING_LIVES } from "../engine/constants.js";
 import { createMatchState, stepSimulation, queuePlayerDirection, isMatchOver, resetRound } from "../engine/engine.js";
-import { chooseAiDirection } from "../engine/ai.js";
+import { chooseAiDirection, pickNextAiProfile, pickRandomAiProfile } from "../engine/ai.js";
 import { createMatch, getMatch } from "../engine/matchStore.js";
 
 const router = express.Router();
+
+function toPublicState(state) {
+  const { aiProfile, ...publicState } = state;
+  return publicState;
+}
 
 router.post("/create", (req, res) => {
   const matchId = Date.now().toString();
 
   const state = createMatchState(req.body.previousMatchesWon);
+  state.aiProfile = pickRandomAiProfile().id;
 
   state.mode = "ai";
   state.status = "playing";
 
   createMatch(matchId, state);
 
-  res.json({ matchId, state });
+  res.json({ matchId, state: toPublicState(state) });
 });
 
 router.post("/:matchId/move", (req, res) => {
@@ -43,7 +49,7 @@ router.post("/:matchId/move", (req, res) => {
   stepSimulation(state);
 
   res.json({
-    state,
+    state: toPublicState(state),
     matchOver: state.matchOver,
     winner: state.winner
   });
@@ -59,9 +65,11 @@ router.post("/:matchId/reset-round", (req, res) => {
   if (isMatchOver(state))
     return res.status(400).json({ error: "Match finished" });
 
+  const prevProfile = state.aiProfile;
   resetRound(state);
+  state.aiProfile = pickNextAiProfile(prevProfile).id;
 
-  res.json({ state });
+  res.json({ state: toPublicState(state) });
 });
 
 router.get("/config", (req, res) => {
