@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Trophy, Cpu, Crown, Zap, ArrowLeft, MessageSquare, UserPlus, UserCheck, Clock, UserMinus, ShieldOff, ShieldCheck, Swords } from "lucide-react";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
-import { getUserById, getUserByUsername } from "../api/users";
+import { getImgById, getUserById, getUserByUsername } from "../api/users";
 import { getFriendStatus, sendFriendRequest, acceptFriendRequest, removeFriend, blockUser, unblockUser } from "../api/friends";
 import { usePresence } from "../context/PresenceContext";
 import { getStoredToken, decodeToken } from "../utils/auth";
@@ -19,11 +19,14 @@ export default function UserProfile() {
   const { socketRef } = useSocket();
 
   const [profile, setProfile] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [status, setStatus] = useState("loading");
   const [friendStatus, setFriendStatus] = useState("none"); // none | pending_sent | pending_received | accepted | blocked | blocked_by
   const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
+    let objectUrl = null;
+    let isMounted = true;
     const currentUserId = decodeToken(getStoredToken())?.id;
     const fetchFn = /^\d+$/.test(id) ? getUserById(id) : getUserByUsername(id);
     fetchFn
@@ -42,10 +45,25 @@ export default function UserProfile() {
           rank: Number(data.rank ?? 0),
         });
         setStatus("success");
-        return getFriendStatus(data.id);
+        return Promise.all([
+          getFriendStatus(data.id),
+          getImgById(data.id).catch(() => null)
+        ]);
       })
-      .then((rel) => setFriendStatus(rel.status))
+      .then(([rel, avatarBlob]) => {
+        setFriendStatus(rel.status);
+        if (avatarBlob && isMounted) {
+          objectUrl = URL.createObjectURL(avatarBlob);
+          setAvatarUrl(objectUrl);
+        } else if (isMounted) {
+          setAvatarUrl("");
+        }
+      })
       .catch((err) => { if (err !== "self") setStatus("error"); });
+    return () => {
+      isMounted = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [id]);
 
   const handleFriendAction = async () => {
@@ -107,6 +125,8 @@ export default function UserProfile() {
   if (status === "error")
     return <div className="flex min-h-screen items-center justify-center text-red-500 font-mono">USER_NOT_FOUND</div>;
 
+  const winRate = profile.matches === 0 ? "0.00%" : `${((profile.wins / profile.matches) * 100).toFixed(2)}%`;
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
       <div className="pointer-events-none absolute inset-0">
@@ -135,9 +155,13 @@ export default function UserProfile() {
           </button>
 
           {/* Avatar */}
-          <div className="mb-6 flex justify-center">
+          <div className="mb-6 relative flex items-center justify-center">
             <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-cyan-500/40 shadow-[0_0_20px_rgba(0,247,255,0.3)] overflow-hidden bg-black">
-              <img src={userimage} alt="User Profile" className="h-full w-full object-cover" />
+              <img src={avatarUrl || userimage} alt="User Profile" className="h-full w-full object-cover" />
+            </div>
+            <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-y-1/2 translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
+              <span className="text-[9px] uppercase tracking-[0.2em]">Rank</span>
+              <span className="text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
             </div>
           </div>
 
@@ -245,9 +269,9 @@ export default function UserProfile() {
             <div className="rounded-xl border border-cyan-300/30 bg-cyan-950/10 p-6 backdrop-blur-sm transition-transform hover:scale-105">
               <div className="mb-2 flex items-center justify-center gap-2 text-cyan-400">
                 <Crown size={18} />
-                <span className="text-xs uppercase tracking-[0.2em]">Rank</span>
+                <span className="text-xs uppercase tracking-[0.2em]">Win Rate</span>
               </div>
-              <p className="text-3xl font-bold">#{profile.rank}</p>
+              <p className="text-3xl font-bold">{winRate}</p>
             </div>
           </div>
           )}

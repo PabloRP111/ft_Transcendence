@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus, Swords, UserCheck } from "lucide-react";
+import { Trophy, Cpu, Pencil, Crown, Zap, MessageSquare, Hash, LogOut, Search, UserPlus, ShieldCheck, UserMinus, Swords, UserCheck, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
@@ -168,6 +168,14 @@ export default function ProfilePage() {
         transition={{ duration: 0.6 }}
       >
         <motion.section className="neon-panel relative w-full max-w-3xl p-10 text-center">
+
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="absolute left-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
+          >
+            <ArrowLeft size={18} />
+          </button>
 
           {/* Edit button */}
           <button

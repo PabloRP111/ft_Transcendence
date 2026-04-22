@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { UserRound } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
@@ -31,6 +32,7 @@ const itemVariants = {
 };
 
 export default function CreditsPage() {
+  const navigate = useNavigate();
 
   const players = [
     { id: 1, name: "prosas-p", rol: "Product Owner", avatar: prosas },
@@ -74,10 +76,12 @@ export default function CreditsPage() {
           {/* TEAM GRID */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12">
             {players.map(player => (
-              <motion.div
+              <motion.button
                 key={player.id}
                 variants={itemVariants}
-                className="flex flex-col items-center gap-4 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur text-center shadow-[0_0_20px_rgba(250,204,21,0.72)] hover:border-cyan-400 transition-colors"
+                type="button"
+                onClick={() => navigate(`/profile/${player.name}`)}
+                className="flex flex-col items-center gap-4 rounded-xl border border-cyan-300/30 bg-black/40 p-8 text-center shadow-[0_0_20px_rgba(250,204,21,0.72)] backdrop-blur transition-colors hover:border-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
               >
                 {/* Floating Avatar */}
                 <motion.div
@@ -105,7 +109,7 @@ export default function CreditsPage() {
                     {player.rol}
                   </p>
                 </div>
-              </motion.div>
+              </motion.button>
             ))}
           </div>
         </div>
