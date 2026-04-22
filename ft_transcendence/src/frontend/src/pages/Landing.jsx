@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react"; // Añade esto
 import { motion } from "framer-motion";
-import { Cpu, Trophy } from "lucide-react";
+import { Cpu, Trophy, ChevronUp, ChevronDown, ArrowUpDown, Users } from "lucide-react";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
 import ChatModule from "../components/ChatModule.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiFetch } from "../api/client";
+import { getCurrentUser } from "../api/users.js";
+import { getFriends } from "../api/friends.js";
 import { useNavigate } from "react-router-dom";
 
 const containerVariants = {
@@ -37,14 +39,20 @@ export default function GridLanding() {
 	const navigate = useNavigate();
 	const [topPlayers, setTopPlayers] = useState([]);
 	const [rankingLoading, setRankingLoading] = useState(true);
+	const [rankingPage, setRankingPage] = useState(0);
+	const [rankingAsc, setRankingAsc] = useState(false);
+	const [showFriendsOnly, setShowFriendsOnly] = useState(false);
+	const [currentUserId, setCurrentUserId] = useState(null);
+	const [friendIds, setFriendIds] = useState([]);
+	const pageSize = 9;
 
 	useEffect(() => {
 		if (isAuthenticated) {
 			apiFetch("/ranking")
 				.then((data) => {
 					if (Array.isArray(data)) {
-						const sorted = [...data].sort((a, b) => (b.score || 0) - (a.score || 0));
-						setTopPlayers(sorted);
+						setTopPlayers(data);
+						setRankingPage(0);
 					}
 					setRankingLoading(false);
 				})
@@ -54,6 +62,58 @@ export default function GridLanding() {
 				});
 		}
 	}, [isAuthenticated]);
+
+	useEffect(() => {
+		if (!isAuthenticated) {
+			setCurrentUserId(null);
+			setFriendIds([]);
+			return;
+		}
+
+		getCurrentUser()
+			.then((data) => {
+				if (data?.id) {
+					setCurrentUserId(data.id);
+				}
+			})
+			.catch(() => {
+				setCurrentUserId(null);
+			});
+	}, [isAuthenticated]);
+
+	useEffect(() => {
+		if (!isAuthenticated || !showFriendsOnly) {
+			return;
+		}
+
+		getFriends()
+			.then((data) => {
+				if (Array.isArray(data)) {
+					setFriendIds(data.map((friend) => friend.id));
+				}
+			})
+			.catch(() => {
+				setFriendIds([]);
+			});
+	}, [isAuthenticated, showFriendsOnly]);
+
+	const sortedPlayers = [...topPlayers].sort((a, b) => {
+		const scoreA = a.score || 0;
+		const scoreB = b.score || 0;
+		if (scoreA === scoreB) {
+			return (a.id || 0) - (b.id || 0);
+		}
+		return rankingAsc ? scoreA - scoreB : scoreB - scoreA;
+	});
+	const friendIdSet = new Set(friendIds);
+	const filteredPlayers = showFriendsOnly
+		? sortedPlayers.filter((player) => player.id === currentUserId || friendIdSet.has(player.id))
+		: sortedPlayers;
+
+	const totalPages = Math.max(1, Math.ceil(filteredPlayers.length / pageSize));
+	const safePage = Math.min(rankingPage, totalPages - 1);
+	const pageStart = safePage * pageSize;
+	const pageItems = filteredPlayers.slice(pageStart, pageStart + pageSize);
 
 	return (
 		<div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
@@ -79,27 +139,57 @@ export default function GridLanding() {
 
 			{/* ── RANKING SIDEBAR ── */}
 			{!loading && isAuthenticated && (
-				<aside className="hidden lg:flex fixed right-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
+				<aside className="flex fixed right-4 sm:right-6 lg:right-8 top-24 bottom-12 z-40 items-center justify-center w-72 sm:w-80 xl:w-96">
 					<div className="w-full h-[70vh] max-h-[600px] neon-panel bg-black/20 backdrop-blur-sm p-4 flex flex-col">
-						<Trophy className="mx-auto mb-4 text-yellow-500" size={32} />
+						<div className="grid grid-cols-[1fr_auto_1fr] items-center mb-4">
+							<div className="flex justify-start">
+								<button
+									className="neon-button px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+									onClick={() => {
+										setShowFriendsOnly((value) => !value);
+										setRankingPage(0);
+									}}
+									aria-label="Show only friends and me"
+									title={showFriendsOnly ? "Show all players" : "Show only friends"}
+								>
+									<Users size={14} />
+									{showFriendsOnly ? "FRIENDS" : "ALL"}
+								</button>
+							</div>
+							<Trophy className="justify-self-center text-yellow-500" size={32} />
+							<div className="flex justify-end">
+								<button
+									className="neon-button px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+									onClick={() => {
+										setRankingAsc((value) => !value);
+										setRankingPage(0);
+									}}
+									aria-label="Toggle ranking order and go to first page"
+									title={rankingAsc ? "Highest score first" : "Lowest score first"}
+								>
+									<ArrowUpDown size={14} />
+									{rankingAsc ? "ASC" : "DESC"}
+								</button>
+							</div>
+						</div>
 						<h2 className="text-center text-cyan-300 uppercase tracking-widest mb-4">
 							Top Players
 						</h2>
 
-						<div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+						<div className="flex-1 space-y-2">
 							{rankingLoading ? (
 								<div className="text-center text-[10px] text-cyan-500 animate-pulse mt-10">
 									LOADING_RANKING...
 								</div>
 							) : topPlayers.length > 0 ? (
-								topPlayers.map((player, index) => (
+								pageItems.map((player, index) => (
 									<div
 										key={player.id || index}
 										onClick={() => navigate(`/profile/${player.username}`)}
 										className="flex justify-between items-center px-3 py-2 rounded-md border border-cyan-500/20 bg-black/30 hover:border-cyan-400/50 hover:bg-cyan-900/20 cursor-pointer transition-all group"
 									>
 										<span className="text-cyan-100 text-sm">
-											<span className="text-cyan-600 mr-2 font-bold">#{index + 1}</span>
+											<span className="text-cyan-600 mr-2 font-bold">#{pageStart + index + 1}</span>
 											<span className="group-hover:text-cyan-300 transition-colors">
 												{player.username}
 											</span>
@@ -114,6 +204,30 @@ export default function GridLanding() {
 									NO_RECORDS_FOUND
 								</div>
 							)}
+						</div>
+
+						<div className="mt-4 flex items-center justify-between">
+							<button
+								className="neon-button px-3 py-2 text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+								onClick={() => setRankingPage((page) => Math.max(0, page - 1))}
+								disabled={safePage === 0 || totalPages <= 1}
+								aria-label="Previous ranking page"
+							>
+								<ChevronUp size={14} />
+								Prev
+							</button>
+							<div className="text-[10px] text-cyan-500 uppercase tracking-[0.3em]">
+								{safePage + 1} / {totalPages}
+							</div>
+							<button
+								className="neon-button px-3 py-2 text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+								onClick={() => setRankingPage((page) => Math.min(totalPages - 1, page + 1))}
+								disabled={safePage >= totalPages - 1 || totalPages <= 1}
+								aria-label="Next ranking page"
+							>
+								Next
+								<ChevronDown size={14} />
+							</button>
 						</div>
 					</div>
 				</aside>
