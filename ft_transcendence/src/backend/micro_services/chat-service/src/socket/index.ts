@@ -27,6 +27,12 @@ interface ClientToServerEvents {
   gameInviteSend: (payload: { targetId: string }) => void;
   gameInviteAccept: (payload: { inviterId: string; matchId: string }) => void;
   gameInviteDecline: (payload: { inviterId: string }) => void;
+  friendRequest: (payload: { targetId: string }) => void;
+  friendRequestAccepted: (payload: { requesterId: string }) => void;
+  friendRequestDeclined: (payload: { requesterId: string }) => void;
+  friendRemoved: (payload: { targetId: string }) => void;
+  userBlocked: (payload: { targetId: string }) => void;
+  userUnblocked: (payload: { targetId: string }) => void;
 }
 
 interface ServerToClientEvents {
@@ -44,6 +50,12 @@ interface ServerToClientEvents {
   gameInviteDeclined: (data: { targetId: string }) => void;
   gameInviteExpired: (data: { targetId: string }) => void;
   gameInviteCancelled: (data: { inviterId: string }) => void;
+  friendRequestReceived: (data: { fromId: string; fromUsername: string }) => void;
+  friendRequestAccepted: (data: { fromId: string }) => void;
+  friendRequestDeclined: (data: { fromId: string }) => void;
+  friendRemoved: (data: { fromId: string }) => void;
+  userBlocked: (data: { fromId: string }) => void;
+  userUnblocked: (data: { fromId: string }) => void;
 }
 
 /* ──────────────── STATE ──────────────── */
@@ -355,6 +367,40 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       pendingInvites.delete(inviterId);
 
       chat.to(`user-${inviterId}`).emit('gameInviteDeclined', { targetId: userId });
+    });
+
+    /* ───── Friend Requests (relay only — REST is the source of truth) ───── */
+
+    // Relay a friend request notification to the target user
+    socket.on('friendRequest', async ({ targetId }) => {
+      try {
+        const fromUsername = await getUsernameById(userId);
+        chat.to(`user-${targetId}`).emit('friendRequestReceived', { fromId: userId, fromUsername });
+      } catch (err) {
+        console.error('[socket] friendRequest relay error:', err);
+      }
+    });
+
+    // Relay acceptance back to the original requester
+    socket.on('friendRequestAccepted', ({ requesterId }) => {
+      chat.to(`user-${requesterId}`).emit('friendRequestAccepted', { fromId: userId });
+    });
+
+    // Relay decline back to the original requester
+    socket.on('friendRequestDeclined', ({ requesterId }) => {
+      chat.to(`user-${requesterId}`).emit('friendRequestDeclined', { fromId: userId });
+    });
+
+    socket.on('friendRemoved', ({ targetId }) => {
+      chat.to(`user-${targetId}`).emit('friendRemoved', { fromId: userId });
+    });
+
+    socket.on('userBlocked', ({ targetId }) => {
+      chat.to(`user-${targetId}`).emit('userBlocked', { fromId: userId });
+    });
+
+    socket.on('userUnblocked', ({ targetId }) => {
+      chat.to(`user-${targetId}`).emit('userUnblocked', { fromId: userId });
     });
 
     socket.on('disconnect', async () => {

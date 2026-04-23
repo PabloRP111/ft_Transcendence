@@ -72,12 +72,15 @@ export default function UserProfile() {
     try {
       if (friendStatus === "none") {
         await sendFriendRequest(profile.id);
+        socketRef.current?.emit("friendRequest", { targetId: String(profile.id) });
         setFriendStatus("pending_sent");
       } else if (friendStatus === "pending_received") {
         await acceptFriendRequest(profile.id);
+        socketRef.current?.emit("friendRequestAccepted", { requesterId: String(profile.id) });
         setFriendStatus("accepted");
       } else if (friendStatus === "accepted") {
         await removeFriend(profile.id);
+        socketRef.current?.emit("friendRemoved", { targetId: String(profile.id) });
         setFriendStatus("none");
       }
     } finally {
@@ -90,6 +93,7 @@ export default function UserProfile() {
     setFriendLoading(true);
     try {
       await blockUser(profile.id);
+      socketRef.current?.emit("userBlocked", { targetId: String(profile.id) });
       setFriendStatus("blocked");
     } finally {
       setFriendLoading(false);
@@ -101,11 +105,53 @@ export default function UserProfile() {
     setFriendLoading(true);
     try {
       await unblockUser(profile.id);
+      socketRef.current?.emit("userUnblocked", { targetId: String(profile.id) });
       setFriendStatus("none");
     } finally {
       setFriendLoading(false);
     }
   };
+
+  // Listen for real-time relationship changes initiated by the other user
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !profile) return;
+
+    const onFriendRequest = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("pending_received");
+    };
+    const onFriendAccepted = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("accepted");
+    };
+    const onFriendDeclined = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("none");
+    };
+    const onFriendRemoved = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("none");
+    };
+    const onBlocked = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("blocked_by");
+    };
+    const onUnblocked = ({ fromId }) => {
+      if (String(fromId) === String(profile.id)) setFriendStatus("none");
+    };
+
+    socket.on("friendRequestReceived", onFriendRequest);
+    socket.on("friendRequestAccepted", onFriendAccepted);
+    socket.on("friendRequestDeclined", onFriendDeclined);
+    socket.on("friendRemoved", onFriendRemoved);
+    socket.on("userBlocked", onBlocked);
+    socket.on("userUnblocked", onUnblocked);
+
+    return () => {
+      socket.off("friendRequestReceived", onFriendRequest);
+      socket.off("friendRequestAccepted", onFriendAccepted);
+      socket.off("friendRequestDeclined", onFriendDeclined);
+      socket.off("friendRemoved", onFriendRemoved);
+      socket.off("userBlocked", onBlocked);
+      socket.off("userUnblocked", onUnblocked);
+    };
+  }, [socketRef.current, profile]);
 
   const friendButton = () => {
     if (friendStatus === "accepted")

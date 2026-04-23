@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck, Swords } from "lucide-react";
+import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck, Swords, ShieldOff, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
@@ -17,6 +17,8 @@ export default function ChatView({
   sendError,
   onAddFriend,
   onGameInvite,
+  onBlock,
+  onUnblock,
   onTyping,
   onSendMessage,
   onBack,
@@ -103,6 +105,26 @@ export default function ChatView({
             title="Challenge to a game"
           >
             <Swords size={14} />
+          </button>
+        )}
+        {/* Unblock — shown when I have blocked the other user */}
+        {isDM && dmFriendStatus === "blocked" && (
+          <button
+            onClick={onUnblock}
+            className="text-red-400/50 hover:text-green-400 transition-colors"
+            title="Unblock user"
+          >
+            <ShieldCheck size={14} />
+          </button>
+        )}
+        {/* Block — shown for DMs where no block exists in either direction */}
+        {isDM && !isBlocked && dmFriendStatus !== "blocked" && (
+          <button
+            onClick={onBlock}
+            className="text-cyan-100/20 hover:text-red-400 transition-colors"
+            title="Block user"
+          >
+            <ShieldOff size={14} />
           </button>
         )}
         {isLeavable && (

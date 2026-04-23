@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LightCycles from "../components/LightCycles";
 import { getCurrentUser, searchUsers, getImgById } from "../api/users";
-import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getBlockedUsers, getFriendStatus, removeFriend } from "../api/friends";
+import { getFriends, getPendingRequests, acceptFriendRequest, declineFriendRequest, sendFriendRequest, getBlockedUsers, getFriendStatus, removeFriend, unblockUser } from "../api/friends";
 import { getConversations, leaveChannel, searchChannels, joinChannel } from "../api/chat";
 import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
@@ -73,6 +73,57 @@ export default function ProfilePage() {
     getPendingRequests().then(setPending).catch(() => {});
   }, [loading, isAuthenticated]);
 
+  // Real-time friend request notifications via chat socket
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    // Someone sent us a friend request — add to pending immediately
+    socket.on('friendRequestReceived', ({ fromId, fromUsername }) => {
+      setPending((prev) => {
+        if (prev.some((p) => p.id === fromId)) return prev;
+        return [...prev, { id: fromId, username: fromUsername }];
+      });
+    });
+
+    // Someone accepted our request — refresh friends list and update search results
+    socket.on('friendRequestAccepted', ({ fromId }) => {
+      getFriends().then(setFriends).catch(() => {});
+      setSocialResults((prev) => ({
+        ...prev,
+        users: prev.users.map((u) =>
+          String(u.id) === String(fromId) ? { ...u, friendStatus: 'accepted' } : u
+        ),
+      }));
+      setSocialActions((prev) => {
+        const next = { ...prev };
+        delete next[`user-${fromId}`];
+        return next;
+      });
+    });
+
+    // Someone declined our request — reset their status in search results
+    socket.on('friendRequestDeclined', ({ fromId }) => {
+      setSocialResults((prev) => ({
+        ...prev,
+        users: prev.users.map((u) =>
+          String(u.id) === String(fromId) ? { ...u, friendStatus: 'none' } : u
+        ),
+      }));
+      setSocialActions((prev) => {
+        const next = { ...prev };
+        delete next[`user-${fromId}`];
+        return next;
+      });
+    });
+
+    return () => {
+      socket.off('friendRequestReceived');
+      socket.off('friendRequestAccepted');
+      socket.off('friendRequestDeclined');
+    };
+  }, [socketRef.current]);
+
   useEffect(() => {
     if (tab !== "Social") return;
     // Use individual catches so one failing endpoint doesn't wipe all sections
@@ -91,6 +142,7 @@ export default function ProfilePage() {
 
   const handleAccept = async (requesterId) => {
     await acceptFriendRequest(requesterId);
+    socketRef.current?.emit('friendRequestAccepted', { requesterId: String(requesterId) });
     setPending((prev) => prev.filter((p) => p.id !== requesterId));
     const updated = await getFriends();
     setFriends(updated);
@@ -98,6 +150,7 @@ export default function ProfilePage() {
 
   const handleDecline = async (requesterId) => {
     await declineFriendRequest(requesterId);
+    socketRef.current?.emit('friendRequestDeclined', { requesterId: String(requesterId) });
     setPending((prev) => prev.filter((p) => p.id !== requesterId));
   };
 
@@ -328,6 +381,7 @@ export default function ProfilePage() {
                                     onClick={async () => {
                                       setSocialActions((prev) => ({ ...prev, [`user-${u.id}`]: "pending" }));
                                       await sendFriendRequest(u.id).catch(() => {});
+                                      socketRef.current?.emit('friendRequest', { targetId: String(u.id) });
                                       setSocialActions((prev) => ({ ...prev, [`user-${u.id}`]: "done" }));
                                     }}
                                     className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-cyan-500/30 text-cyan-400 px-2 py-1 rounded hover:bg-cyan-500/10 transition-colors disabled:opacity-40"

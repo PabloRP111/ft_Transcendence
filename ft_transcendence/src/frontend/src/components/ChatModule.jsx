@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 // API & Hooks
 import { getConversations, getMessages, createConversation, searchChannels, joinChannel, leaveChannel } from "../api/chat";
 import { searchUsers } from "../api/users";
-import { getFriendStatus, sendFriendRequest } from "../api/friends";
+import { getFriendStatus, sendFriendRequest, blockUser, unblockUser } from "../api/friends";
 import { useChat } from "../hooks/useChat";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSocket } from "../context/SocketContext";
@@ -72,9 +72,11 @@ export default function ChatModule() {
   const searchTimerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const isInitializing = useRef(false);
-  // Ref so socket handlers always see the latest activeConversationId without stale closures
+  // Refs so socket handlers always see the latest values without stale closures
   const activeConvIdRef = useRef(activeConversationId);
   useEffect(() => { activeConvIdRef.current = activeConversationId; }, [activeConversationId]);
+  const conversationsRef = useRef(conversations);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
   // ── WebSocket — room joining only (via useChat) ───────────────────────────
   const socketRef = useChat(activeConversationId);
@@ -152,12 +154,35 @@ export default function ChatModule() {
     const onRateLimitExceeded = ({ retryAfter }) =>
       showSendError(`Slow down — try again in ${Math.ceil(retryAfter / 1000)}s`);
 
+    // Update block state in real time when the other DM participant blocks/unblocks us
+    const onUserBlocked = ({ fromId }) => {
+      const conv = conversationsRef.current.find(c => String(c.id) === String(activeConvIdRef.current));
+      const otherId = conv?.participants?.[0]?.id;
+      if (conv?.type === "private" && String(fromId) === String(otherId)) {
+        setDmIsBlocked(true);
+        setDmFriendStatus("blocked_by");
+        setBlockedConvIds((prev) => new Set(prev).add(conv.id));
+      }
+    };
+
+    const onUserUnblocked = ({ fromId }) => {
+      const conv = conversationsRef.current.find(c => String(c.id) === String(activeConvIdRef.current));
+      const otherId = conv?.participants?.[0]?.id;
+      if (conv?.type === "private" && String(fromId) === String(otherId)) {
+        setDmIsBlocked(false);
+        setDmFriendStatus("none");
+        setBlockedConvIds((prev) => { const next = new Set(prev); next.delete(conv.id); return next; });
+      }
+    };
+
     socket.on("newMessage", onNewMessage);
     socket.on("messageRead", onMessageRead);
     socket.on("typingStart", onTypingStart);
     socket.on("typingStop", onTypingStop);
     socket.on("messageFailed", onMessageFailed);
     socket.on("rateLimitExceeded", onRateLimitExceeded);
+    socket.on("userBlocked", onUserBlocked);
+    socket.on("userUnblocked", onUserUnblocked);
 
     return () => {
       socket.off("newMessage", onNewMessage);
@@ -166,6 +191,8 @@ export default function ChatModule() {
       socket.off("typingStop", onTypingStop);
       socket.off("messageFailed", onMessageFailed);
       socket.off("rateLimitExceeded", onRateLimitExceeded);
+      socket.off("userBlocked", onUserBlocked);
+      socket.off("userUnblocked", onUserUnblocked);
     };
   }, [socketRef, connected]);
 
@@ -429,6 +456,24 @@ export default function ChatModule() {
               const other = activeConversation?.participants?.[0];
               if (!other) return;
               sendGameInvite(socketRef, other.id, other.username);
+            }}
+            onBlock={async () => {
+              const otherId = activeConversation?.participants?.[0]?.id;
+              if (!otherId) return;
+              await blockUser(otherId).catch(() => {});
+              socketRef.current?.emit("userBlocked", { targetId: String(otherId) });
+              setDmIsBlocked(true);
+              setDmFriendStatus("blocked");
+              setBlockedConvIds((prev) => new Set(prev).add(activeConversationId));
+            }}
+            onUnblock={async () => {
+              const otherId = activeConversation?.participants?.[0]?.id;
+              if (!otherId) return;
+              await unblockUser(otherId).catch(() => {});
+              socketRef.current?.emit("userUnblocked", { targetId: String(otherId) });
+              setDmIsBlocked(false);
+              setDmFriendStatus("none");
+              setBlockedConvIds((prev) => { const next = new Set(prev); next.delete(activeConversationId); return next; });
             }}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
