@@ -327,6 +327,18 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       // Validate this socket's user is the intended target
       if (!invite || invite.targetId !== userId) return;
 
+      // Guard against the race condition where the inviter refreshed/disconnected
+      // just before the target accepted. Socket.IO's ping timeout means the server
+      // may not have fired 'disconnect' yet, so we check presence explicitly.
+      const inviterOnline = presence.has(inviterId) && presence.get(inviterId)!.size > 0;
+      if (!inviterOnline) {
+        clearTimeout(invite.timer);
+        pendingInvites.delete(inviterId);
+        // Tell the target the invite is no longer valid so they aren't left waiting
+        socket.emit('gameInviteCancelled', { inviterId });
+        return;
+      }
+
       clearTimeout(invite.timer);
       pendingInvites.delete(inviterId);
 
@@ -363,12 +375,12 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
         chat.to(`user-${outgoing.targetId}`).emit('gameInviteCancelled', { inviterId: userId });
       }
 
-      // If this user was the target of a pending invite, cancel it from the inviter's side
+      // If this user was the target of a pending invite, notify the inviter they disconnected
       for (const [inviterId, invite] of pendingInvites.entries()) {
         if (invite.targetId === userId) {
           clearTimeout(invite.timer);
           pendingInvites.delete(inviterId);
-          chat.to(`user-${inviterId}`).emit('gameInviteExpired', { targetId: userId });
+          chat.to(`user-${inviterId}`).emit('gameInviteCancelled', { inviterId: userId });
           break;
         }
       }

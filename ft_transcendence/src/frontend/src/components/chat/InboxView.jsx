@@ -16,7 +16,9 @@ export default function InboxView({
 }) {
   const onlineUsers = usePresence();
 
-  const sorted = [...conversations].sort((a, b) => {
+  const sorted = [...conversations]
+    .filter((c) => c.type !== "private" || c.lastMessageAt)
+    .sort((a, b) => {
     const aIsArena = a.name?.toLowerCase() === "arena_general";
     const bIsArena = b.name?.toLowerCase() === "arena_general";
     if (aIsArena) return -1;

@@ -19,6 +19,7 @@ export default function InviteModal() {
 
   // Incoming invite from another user
   const [incoming, setIncoming] = useState(null); // { inviterId, inviterUsername }
+  const incomingRef = useRef(null); // mirrors incoming for use inside socket closures
   const [countdown, setCountdown] = useState(INVITE_TTL);
   const [accepting, setAccepting] = useState(false);
   const countdownRef = useRef(null);
@@ -26,8 +27,11 @@ export default function InviteModal() {
   // Outgoing invite this user sent
   const [outgoing, setOutgoing] = useState(null); // { targetUsername } | null
   // Brief result message shown after the invite resolves
-  const [result, setResult] = useState(null); // "accepted" | "declined" | "expired" | null
+  const [result, setResult] = useState(null); // "accepted" | "declined" | "expired" | "cancelled" | null
   const resultTimerRef = useRef(null);
+
+  // Keep ref in sync so socket handlers always see the latest value
+  useEffect(() => { incomingRef.current = incoming; }, [incoming]);
 
   // ── Countdown for incoming invite ─────────────────────────────────────────
   useEffect(() => {
@@ -63,9 +67,17 @@ export default function InviteModal() {
       setIncoming({ inviterId, inviterUsername });
     });
 
-    // Target side: inviter cancelled/disconnected before answer
+    // Dual-purpose: target receives this when the inviter disconnects,
+    // inviter receives this when the target disconnects before answering.
     socket.on("gameInviteCancelled", () => {
-      setIncoming(null);
+      if (incomingRef.current) {
+        // We are the target — inviter left, dismiss the modal
+        setIncoming(null);
+      } else {
+        // We are the inviter — target disconnected before answering
+        setOutgoing(null);
+        showResult("cancelled");
+      }
     });
 
     // Inviter side: target accepted — navigate to the game
@@ -182,6 +194,7 @@ export default function InviteModal() {
           <span className="text-gray-300 text-sm font-mono">
             {result === "declined" && "Invite declined."}
             {result === "expired" && "Invite expired — no response."}
+            {result === "cancelled" && "Invite cancelled."}
             {result === "accepted" && "Challenge accepted!"}
           </span>
         </div>
