@@ -8,6 +8,11 @@ import bcrypt from "bcrypt";
 
 const router = express.Router();
 const SALT_ROUNDS = 10;
+
+// Server-side validators — mirror the frontend rules in security.js
+const isValidEmail    = (v) => typeof v === "string" && v.length <= 100 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+const isValidUsername = (v) => typeof v === "string" && /^[a-zA-Z0-9_]{3,20}$/.test(v);
+const isValidPassword = (v) => typeof v === "string" && v.length >= 6;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const AVATAR_DIR = path.resolve(__dirname, "..", "..", "assets", "users_profile_images");
@@ -44,6 +49,12 @@ router.post("/register", async (req, res) => {
 
   if (!email || !username || !password)
     return res.status(400).json({ error: "Missing fields" });
+  if (!isValidEmail(email))
+    return res.status(400).json({ error: "Invalid email format" });
+  if (!isValidUsername(username))
+    return res.status(400).json({ error: "Username must be 3-20 alphanumeric characters" });
+  if (!isValidPassword(password))
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
 
   try {
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
@@ -164,6 +175,12 @@ router.put("/:id", async (req, res) => {
 
   if (!username && !email && !password)
     return res.status(400).json({ error: "Nothing to update" });
+  if (email    && !isValidEmail(email))
+    return res.status(400).json({ error: "Invalid email format" });
+  if (username && !isValidUsername(username))
+    return res.status(400).json({ error: "Username must be 3-20 alphanumeric characters" });
+  if (password && !isValidPassword(password))
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
 
   try {
     const fields = [];
