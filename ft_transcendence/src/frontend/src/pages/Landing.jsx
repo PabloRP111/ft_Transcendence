@@ -176,7 +176,7 @@ export default function GridLanding() {
 							Top Players
 						</h2>
 
-						<div className="flex-1 space-y-2">
+						<div className="flex-1 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
 							{rankingLoading ? (
 								<div className="text-center text-[10px] text-cyan-500 animate-pulse mt-10">
 									LOADING_RANKING...
