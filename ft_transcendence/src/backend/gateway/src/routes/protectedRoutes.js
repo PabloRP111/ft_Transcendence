@@ -132,7 +132,8 @@ router.put("/me", authMiddleware, async (req, res) => {
     const response = await fetch(`${USERS_SERVICE}/${req.user.id}`, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "X-User-Id": String(req.user.id)
       },
       body: JSON.stringify(req.body)
     });

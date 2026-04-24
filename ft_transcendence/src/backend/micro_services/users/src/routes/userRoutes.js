@@ -171,6 +171,11 @@ router.get("/ranking", async (req, res) => {
 
 // UPDATE USER
 router.put("/:id", async (req, res) => {
+  const requestingId = parseInt(req.headers["x-user-id"], 10);
+  const targetId     = parseInt(req.params.id, 10);
+  if (!requestingId || requestingId !== targetId)
+    return res.status(403).json({ error: "Forbidden" });
+
   const { username, email, password } = req.body;
 
   if (!username && !email && !password)
