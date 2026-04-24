@@ -10,7 +10,7 @@ const SocketContext = createContext();
  * connects or disconnects (e.g. PresenceContext re-registering listeners).
  */
 export function SocketProvider({ children }) {
-  const { accessToken, logoutUser } = useAuth();
+  const { accessToken, logoutUser, tryRefresh } = useAuth();
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
 
@@ -42,8 +42,19 @@ export function SocketProvider({ children }) {
     });
 
     socket.on("connect_error", (err) => {
-      if (err.message === "token expired" || err.message === "missing token") {
-        console.error("[socket] Auth error:", err.message);
+      if (err.message === "token expired") {
+        // The access token expired while the socket was reconnecting.
+        // Stop retrying with the stale token, then attempt a silent refresh.
+        // If the refresh succeeds, accessToken state changes and this effect
+        // re-runs, creating a new socket with the fresh token.
+        // If the refresh fails (refresh token also gone), tryRefresh calls logoutUser.
+        console.warn("[socket] Token expired on reconnect — attempting silent refresh.");
+        socket.disconnect();
+        tryRefresh();
+        return;
+      }
+      if (err.message === "missing token") {
+        console.error("[socket] Auth error: missing token.");
         logoutUser();
       }
     });
@@ -55,7 +66,7 @@ export function SocketProvider({ children }) {
       socketRef.current = null;
       setConnected(false);
     };
-  }, [accessToken, logoutUser]);
+  }, [accessToken, logoutUser, tryRefresh]);
 
   return (
     <SocketContext.Provider value={{ socketRef, connected }}>
