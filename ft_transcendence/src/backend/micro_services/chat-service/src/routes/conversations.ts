@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/pool';
-import { getChatNamespace } from '../socket';
+import { getChatNamespace, getPresence } from '../socket';
 
 const router = Router();
 
@@ -147,6 +147,16 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
             const sockets = await namespace.in(`user-${pid}`).fetchSockets();
             for (const s of sockets) {
               s.join(String(conversation.id));
+            }
+
+            // Push presence info so both sides show the correct online status
+            // immediately without waiting for a reconnect or page refresh.
+            // The creator is making this request, so they are definitely online.
+            // If the other participant is also online, tell the creator too.
+            const presence = getPresence();
+            namespace.to(`user-${pid}`).emit('userOnline', { userId: String(creatorId) });
+            if (presence.has(String(pid))) {
+              namespace.to(`user-${creatorId}`).emit('userOnline', { userId: String(pid) });
             }
           } catch (err) {
             // Non-fatal: the participant will pick it up on next refresh

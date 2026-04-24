@@ -56,9 +56,6 @@ export default function ChatModule() {
 
   const [pendingDmUserId, setPendingDmUserId] = useState(null);
   const [pendingChannelId, setPendingChannelId] = useState(null);
-  // A conversation created from search that hasn't had a message sent yet.
-  // Kept separate so it doesn't appear in InboxView until the first message is sent.
-  const [ephemeralConversation, setEphemeralConversation] = useState(null);
 
   // True when the active DM has a block in either direction (I blocked them or they blocked me)
   const [dmIsBlocked, setDmIsBlocked] = useState(false);
@@ -94,11 +91,6 @@ export default function ChatModule() {
       if (String(msg.senderId) === String(myId)) {
         saveLastOpened(myId, msg.conversationId);
       }
-
-      // If this was an ephemeral (not-yet-sent) conversation, it's now real — clear it.
-      setEphemeralConversation((prev) =>
-        prev && String(prev.id) === String(msg.conversationId) ? null : prev
-      );
 
       setConversations((prev) => {
         const known = prev.some((c) => String(c.id) === String(msg.conversationId));
@@ -403,9 +395,7 @@ export default function ChatModule() {
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const activeConversation =
-    conversations.find(c => c.id === activeConversationId) ||
-    (ephemeralConversation?.id === activeConversationId ? ephemeralConversation : null);
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
 
   return (
     <motion.section
@@ -477,7 +467,7 @@ export default function ChatModule() {
             }}
             onTyping={handleTyping}
             onSendMessage={handleSendMessage}
-            onBack={() => { setView("inbox"); setActiveConversationId(null); setEphemeralConversation(null); }}
+            onBack={() => { setView("inbox"); setActiveConversationId(null); }}
             onLeaveChannel={async () => {
               await leaveChannel(activeConversationId);
               setConversations((prev) => prev.filter((c) => c.id !== activeConversationId));
@@ -496,11 +486,7 @@ export default function ChatModule() {
             onSearchChange={handleSearchChange}
             onStartDM={async (userId) => {
               const conv = await createConversation("private", [String(userId)]);
-              // Check if this conversation is already in the list (existing DM).
-              // If not, hold it as ephemeral so it doesn't appear in the inbox
-              // until the first message is actually sent.
-              const alreadyKnown = conversations.some(c => String(c.id) === String(conv.id));
-              if (!alreadyKnown) setEphemeralConversation(conv);
+              setConversations(await getConversations());
               openConversation(conv.id);
             }}
             onJoinChannel={async (channelId) => {

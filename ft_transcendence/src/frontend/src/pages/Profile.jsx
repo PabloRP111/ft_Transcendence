@@ -79,15 +79,15 @@ export default function ProfilePage() {
     if (!socket) return;
 
     // Someone sent us a friend request — add to pending immediately
-    socket.on('friendRequestReceived', ({ fromId, fromUsername }) => {
+    const onFriendRequestReceived = ({ fromId, fromUsername }) => {
       setPending((prev) => {
         if (prev.some((p) => p.id === fromId)) return prev;
         return [...prev, { id: fromId, username: fromUsername }];
       });
-    });
+    };
 
     // Someone accepted our request — refresh friends list and update search results
-    socket.on('friendRequestAccepted', ({ fromId }) => {
+    const onFriendRequestAccepted = ({ fromId }) => {
       getFriends().then(setFriends).catch(() => {});
       setSocialResults((prev) => ({
         ...prev,
@@ -100,10 +100,10 @@ export default function ProfilePage() {
         delete next[`user-${fromId}`];
         return next;
       });
-    });
+    };
 
     // Someone declined our request — reset their status in search results
-    socket.on('friendRequestDeclined', ({ fromId }) => {
+    const onFriendRequestDeclined = ({ fromId }) => {
       setSocialResults((prev) => ({
         ...prev,
         users: prev.users.map((u) =>
@@ -115,12 +115,16 @@ export default function ProfilePage() {
         delete next[`user-${fromId}`];
         return next;
       });
-    });
+    };
+
+    socket.on('friendRequestReceived', onFriendRequestReceived);
+    socket.on('friendRequestAccepted', onFriendRequestAccepted);
+    socket.on('friendRequestDeclined', onFriendRequestDeclined);
 
     return () => {
-      socket.off('friendRequestReceived');
-      socket.off('friendRequestAccepted');
-      socket.off('friendRequestDeclined');
+      socket.off('friendRequestReceived', onFriendRequestReceived);
+      socket.off('friendRequestAccepted', onFriendRequestAccepted);
+      socket.off('friendRequestDeclined', onFriendRequestDeclined);
     };
   }, [socketRef.current]);
 

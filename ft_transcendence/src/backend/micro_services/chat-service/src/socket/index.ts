@@ -88,6 +88,22 @@ async function getUserConversationIds(userId: string): Promise<string[]> {
   return result.rows.map((r) => String(r.conversation_id));
 }
 
+// Returns the IDs of all users who share at least one conversation with userId.
+// Presence events go to personal rooms (user-${id}) instead of conversation rooms
+// so delivery is guaranteed — every socket is always in its personal room,
+// whereas conversation room membership has timing and join-order edge cases.
+async function getCoParticipantIds(userId: string): Promise<string[]> {
+  const result = await pool.query<{ user_id: number }>(
+    `SELECT DISTINCT cp2.user_id
+     FROM chat.conversation_participants cp1
+     JOIN chat.conversation_participants cp2
+       ON cp1.conversation_id = cp2.conversation_id
+     WHERE cp1.user_id = $1 AND cp2.user_id != $1`,
+    [parseInt(userId, 10)],
+  );
+  return result.rows.map((r) => String(r.user_id));
+}
+
 function hasStringField(payload: unknown, field: string): boolean {
   return (
     typeof payload === 'object' &&
@@ -186,8 +202,9 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       }
 
       if (wasOffline) {
-        for (const convId of conversationIds) {
-          chat.to(convId).emit('userOnline', { userId });
+        const coParticipantIds = await getCoParticipantIds(userId);
+        for (const pid of coParticipantIds) {
+          chat.to(`user-${pid}`).emit('userOnline', { userId });
         }
       }
     } catch (err) {
@@ -285,11 +302,15 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       }
     });
 
-    socket.on('typingStart', ({ conversationId }) => {
+    socket.on('typingStart', async ({ conversationId }) => {
+      const allowed = await isParticipant(conversationId, userIdInt).catch(() => false);
+      if (!allowed) return;
       socket.to(conversationId).emit('typingStart', { conversationId, userId });
     });
 
-    socket.on('typingStop', ({ conversationId }) => {
+    socket.on('typingStop', async ({ conversationId }) => {
+      const allowed = await isParticipant(conversationId, userIdInt).catch(() => false);
+      if (!allowed) return;
       socket.to(conversationId).emit('typingStop', { conversationId, userId });
     });
 
@@ -435,9 +456,9 @@ export function attachSocketIO(httpServer: HttpServer): SocketServer {
       if (!presence.has(userId) || presence.get(userId)!.size === 0) {
         presence.delete(userId);
         try {
-          const conversationIds = await getUserConversationIds(userId);
-          for (const convId of conversationIds) {
-            chat.to(convId).emit('userOffline', { userId });
+          const coParticipantIds = await getCoParticipantIds(userId);
+          for (const pid of coParticipantIds) {
+            chat.to(`user-${pid}`).emit('userOffline', { userId });
           }
         } catch (err) {
           console.error('[socket] userOffline error:', err);
