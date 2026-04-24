@@ -1,6 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Plus, LogOut, Swords } from "lucide-react";
+import { Search, Plus, LogOut, Swords, ArrowUpDown } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
 
@@ -15,16 +15,33 @@ export default function InboxView({
   onGameInvite,
 }) {
   const onlineUsers = usePresence();
+  const [page, setPage] = useState(0);
+  const pageSize = 8;
+  const [sortAlpha, setSortAlpha] = useState(false);
 
-  const sorted = [...conversations].sort((a, b) => {
-    const aIsArena = a.name?.toLowerCase() === "arena_general";
-    const bIsArena = b.name?.toLowerCase() === "arena_general";
-    if (aIsArena) return -1;
-    if (bIsArena) return 1;
-    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
-    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
-    return bTime - aTime;
-  });
+  const sorted = useMemo(() => {
+    return [...conversations].sort((a, b) => {
+      const aIsArena = a.name?.toLowerCase() === "arena_general";
+      const bIsArena = b.name?.toLowerCase() === "arena_general";
+      if (aIsArena) return -1;
+      if (bIsArena) return 1;
+      if (sortAlpha) {
+        return convDisplayName(a).localeCompare(convDisplayName(b), undefined, { sensitivity: "base" });
+      }
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [conversations, sortAlpha]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageStart = safePage * pageSize;
+  const pageItems = sorted.slice(pageStart, pageStart + pageSize);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
 
   // For a DM, check if the other participant is online
   const isDMOnline = (conv) => {
@@ -45,12 +62,30 @@ export default function InboxView({
         <span className="text-[10px] uppercase tracking-[0.2em] text-cyan-400">
           Channels
         </span>
-        <button
-          onClick={() => onNavigate("create")}
-          className="text-cyan-100/40 hover:text-cyan-300 transition-colors"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSortAlpha((value) => !value);
+              setPage(0);
+            }}
+            className={`rounded-md border px-1.5 py-1 transition-colors ${
+              sortAlpha
+                ? "border-cyan-400/60 bg-cyan-900/40 text-cyan-200"
+                : "border-cyan-900/40 text-cyan-100/40 hover:text-cyan-300"
+            }`}
+            aria-label="Toggle chat sort order"
+            aria-pressed={sortAlpha}
+            title={sortAlpha ? "Sort by most recent" : "Sort alphabetically"}
+          >
+            <ArrowUpDown size={14} />
+          </button>
+          <button
+            onClick={() => onNavigate("create")}
+            className="text-cyan-100/40 hover:text-cyan-300 transition-colors"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Search input — focuses into SearchView */}
@@ -69,7 +104,7 @@ export default function InboxView({
 
       {/* Conversation list */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-        {sorted.map((conv, idx) => {
+        {pageItems.map((conv, idx) => {
           const isArena = conv.name?.toLowerCase() === "arena_general";
           const hasUnread = unreadIds.has(conv.id) || unreadIds.has(String(conv.id));
           const isOnline = isDMOnline(conv);
@@ -123,12 +158,34 @@ export default function InboxView({
                 )}
               </div>
               {/* Divider pins arena_general above the rest */}
-              {isArena && idx < sorted.length - 1 && (
+              {isArena && idx < pageItems.length - 1 && (
                 <div className="border-t border-cyan-500/20 my-1" />
               )}
             </Fragment>
           );
         })}
+      </div>
+
+      <div className="p-3 pt-2 border-t border-cyan-300/10 flex items-center justify-between">
+        <button
+          className="neon-button px-3 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => setPage((value) => Math.max(0, value - 1))}
+          disabled={safePage === 0 || totalPages <= 1}
+          aria-label="Previous chat page"
+        >
+          Prev
+        </button>
+        <div className="text-[10px] text-cyan-500 uppercase tracking-[0.3em]">
+          {safePage + 1} / {totalPages}
+        </div>
+        <button
+          className="neon-button px-3 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}
+          disabled={safePage >= totalPages - 1 || totalPages <= 1}
+          aria-label="Next chat page"
+        >
+          Next
+        </button>
       </div>
     </motion.div>
   );

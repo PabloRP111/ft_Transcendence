@@ -55,7 +55,7 @@ export default function GridLanding() {
 	const [friendIds, setFriendIds] = useState([]);
 	const [chatCollapsed, setChatCollapsed] = useState(false);
 	const [rankingCollapsed, setRankingCollapsed] = useState(false);
-	const pageSize = 9;
+	const pageSize = 8;
 
 	useEffect(() => {
 		if (isAuthenticated) {
