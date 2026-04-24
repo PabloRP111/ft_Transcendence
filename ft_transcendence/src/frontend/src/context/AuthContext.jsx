@@ -85,6 +85,19 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("session-expired", handleSessionExpired);
   }, []);
 
+  // Sync logout across tabs: when another tab removes the token, clear state here too
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === "accessToken" && e.newValue === null) {
+        setAccessToken(null);
+        localStorage.removeItem("hasRefreshToken");
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{

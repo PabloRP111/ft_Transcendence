@@ -248,7 +248,13 @@ router.post("/:id/avatar", avatarUpload.single("avatar"), async (req, res) => {
 router.get("/by-username/:username", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, username, wins, matches, score, rank FROM auth.users WHERE username = $1`,
+      `SELECT id, username, wins, matches, score, rank
+       FROM (
+         SELECT id, username, wins, matches, score,
+                RANK() OVER (ORDER BY score DESC, id ASC) AS rank
+         FROM auth.users
+       ) ranked
+       WHERE username = $1`,
       [req.params.username]
     );
     if (result.rows.length === 0)
@@ -549,7 +555,13 @@ router.get("/:id", async (req, res) => {
   try {
 
     const result = await pool.query(
-      `SELECT id, email, username, avatar, wins, matches, score, rank FROM auth.users WHERE id = $1`,
+      `SELECT id, email, username, avatar, wins, matches, score, rank
+       FROM (
+         SELECT id, email, username, avatar, wins, matches, score,
+                RANK() OVER (ORDER BY score DESC, id ASC) AS rank
+         FROM auth.users
+       ) ranked
+       WHERE id = $1`,
       [req.params.id]
     );
 
