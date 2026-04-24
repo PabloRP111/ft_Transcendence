@@ -195,7 +195,7 @@ export default function UserProfile() {
           {/* Back button */}
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
+            className="absolute left-6 top-6 z-30 pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
           >
             <ArrowLeft size={18} />
           </button>

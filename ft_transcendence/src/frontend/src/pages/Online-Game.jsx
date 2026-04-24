@@ -236,13 +236,13 @@ export default function TronPvpArena() {
               <div className="scanline-overlay" />
             </div>
 
-            <main className="relative z-20 flex items-center justify-center gap-16 px-10 py-16">
+            <main className="relative z-20 flex flex-col items-center justify-center gap-6 px-3 py-6 sm:gap-8 sm:px-8 sm:py-10 xl:flex-row xl:gap-16 xl:px-10 xl:py-16">
               
               {/* PLAYER 1 */}
               <motion.section
                 initial={{ x: -200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 p-8 bg-[#04070b]"
+                className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
@@ -266,7 +266,7 @@ export default function TronPvpArena() {
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff] overflow-hidden"
+                  className="relative flex w-full max-w-[1000px] aspect-[25/18] max-h-[60vh] sm:max-h-[70vh] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]"
                 >
                   {!state?.board && (
                     <div className="text-red-500 text-xl">
@@ -334,7 +334,7 @@ export default function TronPvpArena() {
               <motion.section
                 initial={{ x: 200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-pink-500/30 bg-[#04070b] p-8"
+                className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-pink-500/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-pink-500/40 shadow-[0_0_40px_#ff007f]">

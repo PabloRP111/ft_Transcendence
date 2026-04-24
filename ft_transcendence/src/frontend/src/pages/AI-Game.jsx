@@ -32,7 +32,7 @@ function Lives({ lives, maxLives }) {
 }
 
 export default function TronDuelArena() {
-  const { config, state, matchResult, sendMove } = useTronBackendMatch();
+  const { config, state, matchResult, sendMove, restartMatch } = useTronBackendMatch();
   const engineRef = useRef(state);
 
   const { isAuthenticated, accessToken } = useAuth();
@@ -104,13 +104,13 @@ export default function TronDuelArena() {
         <div className="scanline-overlay" />
       </div>
 
-      <main className="relative z-20 flex items-center justify-center gap-16 px-10 py-16">
+      <main className="relative z-20 flex flex-col items-center justify-center gap-6 px-3 py-6 sm:gap-8 sm:px-8 sm:py-10 xl:flex-row xl:gap-16 xl:px-10 xl:py-16">
 
         {/* PLAYER 1 */}
         <motion.section
           initial={{ x: -200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur"
+          className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
         >
           <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff] overflow-hidden">
             {avatarUrl ? (
@@ -139,7 +139,7 @@ export default function TronDuelArena() {
 
         {/* ARENA */}
         <div className="flex flex-col items-center gap-10">
-          <div className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]">
+          <div className="relative flex w-full max-w-[1000px] aspect-[25/18] max-h-[60vh] sm:max-h-[70vh] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]">
             <TronCanvas engineState={state} config={config} />
 
             {matchResult && (
@@ -150,7 +150,7 @@ export default function TronDuelArena() {
 
                 <div className="flex gap-6">
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => restartMatch()}
                     className="px-6 py-3 border border-cyan-400 text-cyan-50"
                   >
                     Rematch
@@ -176,7 +176,7 @@ export default function TronDuelArena() {
         <motion.section
           initial={{ x: 200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur"
+          className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
         >
           <div className="h-24 w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
             <img
