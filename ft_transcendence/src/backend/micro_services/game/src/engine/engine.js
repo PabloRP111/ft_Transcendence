@@ -33,6 +33,12 @@ export function createMatchState(previousMatchesWon = [0, 0]) {
     winner: null,
     matchesWon: [...previousMatchesWon],
     status: "waiting",
+    pause: {
+      active: false,
+      startedAt: null,
+      timeoutMs: 30000,
+      disconnectedPlayerId: null
+    },
     mode: null,
     _resetScheduled: false
   };

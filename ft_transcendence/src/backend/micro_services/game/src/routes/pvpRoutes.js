@@ -53,14 +53,13 @@ router.post("/join", (req, res) => {
 
   // RECONECTION
   let player = state.players.find(p => p.userId === userId);
-
   if (player) {
     player.connected = true;
-
-    const allConnected = state.players.every(p => p.connected);
-    if (allConnected)
+    let allConnected = state.players.every(p => p.connected);
+    if (state.status === "paused" && allConnected) {
       state.status = "playing";
-
+      state.pause.active = false;
+    }
     return res.json({ playerId: player.id, ready: allConnected });
   }
 

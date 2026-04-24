@@ -65,11 +65,19 @@ function Lives({ lives, maxLives }) {
 export default function TronPvpArena() {
   const location = useLocation();
   const [avatars, setAvatars] = useState({});
-  const [matchId, setMatchId] = useState(location.state?.matchId ?? null);
+  const [matchId, setMatchId] = useState(
+    location.state?.matchId ?? localStorage.getItem("activeMatch")
+  );
   const { config, state, matchResult, sendMove } = useTronPvP(matchId);
   const isInviteGame = !!location.state?.matchId;
-
+  const [remainingTime, setRemainingTime] = useState(null);
   
+  useEffect(() => {
+    if (state?.matchOver) {
+      localStorage.removeItem("activeMatch");
+    }
+  }, [state?.matchOver]);
+
   useEffect(() => {
     const incoming = location.state?.matchId;
     if (incoming && incoming !== matchId) {
@@ -77,7 +85,7 @@ export default function TronPvpArena() {
     }
   }, [location.state?.matchId]);
 
-  const ready = state?.status === "playing";
+  const ready = state?.status === "playing" || state?.status === "paused";
 
   // MATCHMAKING
   useEffect(() => {
@@ -91,9 +99,8 @@ export default function TronPvpArena() {
         console.error("matchmaking failed", err);
       }
     }
-
     initMatchmaking();
-  }, []);
+  }, [matchId]);
 
   // POST MATCH RESULT TO DM
   useEffect(() => {
@@ -170,14 +177,35 @@ export default function TronPvpArena() {
     loadAvatars();
 
     return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
+      setTimeout(() => {
+        urls.forEach((u) => URL.revokeObjectURL(u));
+      }, 1000);
     };
   }, [state?.players]);
+
+  useEffect(() => {
+    if (state?.status !== "paused" || !state?.pause?.startedAt) {
+      setRemainingTime(null);
+      return;
+    }
+
+    const update = () => {
+      const elapsed = Date.now() - state.pause.startedAt;
+      const left = Math.max(0, state.pause.timeoutMs - elapsed);
+      setRemainingTime(Math.ceil(left / 1000));
+    };
+
+    update();
+
+    const interval = setInterval(update, 250);
+
+    return () => clearInterval(interval);
+  }, [state?.status, state?.pause?.startedAt]);
 
   const isLoading =
     !matchId ||
     !state ||
-    state.status !== "playing";
+    (state.status !== "playing" && state.status !== "paused");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
@@ -186,7 +214,10 @@ export default function TronPvpArena() {
           <motion.div 
             key="loader"
             exit={{ opacity: 0, scale: 1.1 }}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
+            className="min-h-screen w-full bg-[#04070b]"
           >
             <Navbar />
             <MatchmakingLoader />
@@ -196,7 +227,7 @@ export default function TronPvpArena() {
             key="game"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="relative"
+            className="relative min-h-screen w-full bg-[#04070b]"
           >
             {/* Background Effects */}
             <div className="pointer-events-none absolute inset-0">
@@ -211,14 +242,14 @@ export default function TronPvpArena() {
               <motion.section
                 initial={{ x: -200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-8 backdrop-blur"
+                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 p-8 bg-[#04070b]"
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
                     {avatars[state.players[0]?.userId] ? (
                       <img
                         src={avatars[state.players[0]?.userId]}
-                        className="h-full w-full object-cover rounded-full"
+                        className="h-full w-full object-cover rounded-full brightness-125 contrast-110"
                       />
                     ) : (
                       <UserRound size={50} className="text-cyan-400" />
@@ -235,11 +266,26 @@ export default function TronPvpArena() {
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff]"
+                  className="relative flex h-[720px] w-[1000px] items-center justify-center rounded-xl border border-cyan-300/40 bg-black shadow-[0_0_40px_#00f7ff] overflow-hidden"
                 >
                   {!state?.board && (
                     <div className="text-red-500 text-xl">
                       NO BOARD DATA
+                    </div>
+                  )}
+                  {state?.status === "paused" && (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#04070b]">
+                      <div className="text-center">
+                        <h2 className="text-4xl text-cyan-300 uppercase tracking-[0.3em] mb-4">
+                          Opponent Disconnected
+                        </h2>
+                        <p className="text-xs text-cyan-500 mt-4 tracking-widest">
+                          Reconnecting... ({remainingTime}s)
+                        </p>
+                        <p className="text-xs text-cyan-500 mt-4 tracking-widest">
+                          Waiting for reconnection...
+                        </p>
+                      </div>
                     </div>
                   )}
                   {state?.board && (
@@ -249,7 +295,7 @@ export default function TronPvpArena() {
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md border border-cyan-500/30"
+                      className="pointer-events-auto absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#04070b] bg-[#04070b] border border-cyan-500/30"
                     >
                       {/* Título con efecto Neón */}
                       <h2 className="neon-title text-5xl font-bold uppercase tracking-[0.3em] text-cyan-100 mb-12 drop-shadow-[0_0_20px_rgba(0,247,255,0.8)]">
@@ -260,7 +306,10 @@ export default function TronPvpArena() {
                       <div className="flex gap-6">
                         <button
                           className="neon-button px-10 py-4 bg-cyan-500/10 hover:bg-cyan-500/30 border border-cyan-400/60 text-cyan-50 transition-all duration-300 uppercase tracking-widest text-sm font-bold shadow-[0_0_15px_rgba(0,247,255,0.2)] hover:shadow-[0_0_25px_rgba(0,247,255,0.4)]"
-                          onClick={() => window.location.reload()}
+                          onClick={() => {
+                            localStorage.removeItem("activeMatch");
+                            setMatchId(null);
+                          }}
                         >
                           Play Another Game
                         </button>
@@ -285,14 +334,14 @@ export default function TronPvpArena() {
               <motion.section
                 initial={{ x: 200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-pink-500/30 bg-black/40 p-8 backdrop-blur"
+                className="flex w-64 flex-col items-center gap-6 rounded-xl border border-pink-500/30 bg-[#04070b] p-8"
               >
                 <div className="relative">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-pink-500/40 shadow-[0_0_40px_#ff007f]">
                     {avatars[state.players[1]?.userId] ? (
                       <img
                         src={avatars[state.players[1]?.userId]}
-                        className="h-full w-full object-cover rounded-full"
+                        className="h-full w-full object-cover rounded-full brightness-125 contrast-110"
                       />
                     ) : (
                       <UserRound size={50} className="text-cyan-400" />

@@ -1,14 +1,2 @@
-Añadir perfiles de creadores al lanzar programa.
-Redireccion credits page a los perfiles, userprofile page carga imagenes.
-
 Hacer sistema de reconexion.
-
-Implement advanced search functionality with filters, sorting, and pagina-
-tion.Filtros al ranking, que solo salgan amigos, ordenar alfabeticamente y que si hay más resultados de el número que quepa en el componente, te haga un sistema de pasar de páginas.
-
-Terminar notificaciones chat.
-
-Mejorar motor de juego.
-
 Quitar console logs y console errors en la version de repo de 42.
-

@@ -77,32 +77,30 @@ export function initSocket(io) {
       const state = getMatch(matchId);
       if (!state) return;
 
-      const player =
-        state.players.find(p => p.userId === socket.data.userId) ||
-        state.players.find(p => !p.userId);
-
+      const player = state.players.find(p => p.userId === socket.data.userId);
       if (!player) return;
-
       player.userId = socket.data.userId;
       player.connected = true;
 
-      socket.join(matchId);
+      const allConnected = state.players.every(p => p.connected);
+      if (state.status === "paused" && allConnected) {
+        state.status = "playing";
+        state.pause.active = false;
+      }
 
+      socket.join(matchId);
       socket.data.matchId = matchId;
       socket.data.playerId = player.id;
 
       const user = await fetchUser(socket.data.userId);
-
       if (user) {
         player.name = user.username;
         player.avatar = user.avatar || null;
       }
 
-      const allConnected = state.players.every(p => p.connected);
       if (allConnected) {
         state.status = "playing";
       }
-
       game.to(matchId).emit("state_update", state);
     });
 
@@ -121,26 +119,23 @@ export function initSocket(io) {
     });
 
     socket.on("disconnect", () => {
-      const { matchId } = socket.data;
+      const { matchId, playerId } = socket.data;
       const state = getMatch(matchId);
       if (!state) return;
 
-      const player =
-        state.players.find(p => p.userId === socket.data.userId) ||
-        state.players.find(p => !p.userId);
-
-      if (!player) return;
-
-      player.userId = socket.data.userId;
+      const player = state.players.find(p => p.id === playerId);
+      if (!player)
+        return;
       player.connected = false;
 
-      const anyConnected = state.players.some(p => p.connected);
-      if (!anyConnected) {
-        state.status = "waiting";
-      }
-
-      if (matchId) {
-        socket.leave(matchId);
+      if (state.status === "playing") {
+        state.status = "paused";
+        state.pause = {
+          active: true,
+          startedAt: Date.now(),
+          timeoutMs: 30000,
+          disconnectedPlayerId: playerId
+        };
       }
     });
   });
@@ -151,6 +146,24 @@ export function initSocket(io) {
     for (const [matchId, state] of Object.entries(matches)) {
 
       if (state.mode !== "pvp") continue;
+
+      //Pause
+      if (state.status === "paused") {
+        const elapsed = Date.now() - state.pause.startedAt;
+
+        if (elapsed >= state.pause.timeoutMs) {
+          const loser = state.players.find(p => p.id === state.pause.disconnectedPlayerId);
+          const winner = state.players.find(p => p.id !== loser.id);
+
+          state.matchOver = true;
+          state.winner = winner;
+          state.status = "finished";
+        }
+
+        game.to(matchId).emit("state_update", state);
+        continue;
+      }
+      // NORMAL GAME
       if (state.status !== "playing") continue;
 
       stepSimulation(state);

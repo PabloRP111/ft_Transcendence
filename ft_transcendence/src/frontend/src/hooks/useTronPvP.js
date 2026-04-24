@@ -43,9 +43,10 @@ export function useTronPvP(matchId) {
         });
 
         socket.on("state_update", (gameState) => {
-          if (gameState.board instanceof ArrayBuffer)
-            gameState.board = new Uint8Array(gameState.board);
           setState(gameState);
+          if (gameState.status === "playing") {
+            localStorage.setItem("activeMatch", matchId);
+          }
         });
 
         socket.on("disconnect", () => {
@@ -59,7 +60,11 @@ export function useTronPvP(matchId) {
         socketRef.current = socket;
 
       } catch (error) {
-        console.error("Error inicializando el juego:", error);
+        if (error.message.includes("Match not found")) {
+          localStorage.removeItem("activeMatch");
+          setState(null);
+          return;
+        }
       }
     }
 
@@ -69,7 +74,7 @@ export function useTronPvP(matchId) {
       mounted = false;
 
       if (socketRef.current) {
-        socketRef.current.off();
+        socketRef.current.off(); 
         socketRef.current.disconnect();
         socketRef.current = null;
       }

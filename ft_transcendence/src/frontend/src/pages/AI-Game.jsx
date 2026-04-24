@@ -143,7 +143,7 @@ export default function TronDuelArena() {
             <TronCanvas engineState={state} config={config} />
 
             {matchResult && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#04070b] backdrop-blur-md">
                 <h2 className="text-5xl font-bold uppercase text-cyan-100 mb-12">
                   {matchResult === "DRAW" ? "DRAW" : `${matchResult} WINS`}
                 </h2>

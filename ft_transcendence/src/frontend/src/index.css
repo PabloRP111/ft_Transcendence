@@ -157,7 +157,11 @@ a {
       radial-gradient(circle at 50% 18%, var(--tron-primary), transparent 38%),
       radial-gradient(circle at 8% 72%, var(--tron-secondary), transparent 35%),
       radial-gradient(circle at 92% 70%, var(--tron-primary), transparent 36%),
-      linear-gradient(180deg, rgba(2, 6, 12, 0.4) 0%, rgba(10, 10, 10, 1) 62%);
+      linear-gradient(180deg, rgba(2, 6, 12, 0.4) 0%, rgba(4, 7, 11, 1) 62%);
+  }
+
+  .bg-voidBlack {
+    background-color: #04070b;
   }
 
   .grid-floor {

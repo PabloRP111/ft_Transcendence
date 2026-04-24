@@ -114,6 +114,7 @@ export default function GridLanding() {
 	const safePage = Math.min(rankingPage, totalPages - 1);
 	const pageStart = safePage * pageSize;
 	const pageItems = filteredPlayers.slice(pageStart, pageStart + pageSize);
+	const matchId = localStorage.getItem("activeMatch");
 
 	return (
 		<div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
@@ -256,10 +257,16 @@ export default function GridLanding() {
 						className="mt-8 flex flex-col items-center gap-4 w-full max-w-xs sm:max-w-sm"
 					>
 						<button
-							onClick={() => window.location.href = "/online-game"}
+							onClick={() => {
+								if (matchId) {
+									navigate("/online-game", { state: { matchId } });
+								} else {
+									window.location.href = "/online-game";
+								}
+								}}
 							className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center transition-all"
 						>
-							ONLINE GAME
+							{matchId ? "RECONNECT" : "ONLINE GAME"}
 						</button>
 
 						<button

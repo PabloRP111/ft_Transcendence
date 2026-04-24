@@ -7,20 +7,20 @@ const users = [
     username: "femoreno",
     password: "femoreno@admin",
     avatar: "./assets/credits/femoreno.png",
-    wins: 777,
+    wins: 0,
     matches: 777,
-    score: 77700,
-    rank: 1
+    score: 3,
+    rank: 5
   },
   {
     email: "prosas-p@student.42malaga.com",
     username: "prosas-p",
     password: "prosas@admin",
     avatar: "./assets/credits/prosas.png",
-    wins: 0,
-    matches: 777,
-    score: 0,
-    rank: 5
+    wins: 12,
+    matches: 12,
+    score: 1200,
+    rank: 1
   },
   {
     email: "aamoros-@student.42malaga.com",
@@ -28,7 +28,7 @@ const users = [
     password: "aamoros@admin",
     avatar: "./assets/credits/aamoros.png",
     wins: 7,
-    matches: 10,
+    matches: 7,
     score: 700,
     rank: 3
   },
@@ -38,7 +38,7 @@ const users = [
     password: "mzuloaga@admin",
     avatar: "./assets/credits/mzuloaga.png",
     wins: 9,
-    matches: 10,
+    matches: 9,
     score: 900,
     rank: 2
   },
@@ -48,7 +48,7 @@ const users = [
     password: "jotrujil@admin",
     avatar: "./assets/credits/jotrujil.png",
     wins: 8,
-    matches: 10,
+    matches: 8,
     score: 800,
     rank: 4
   }

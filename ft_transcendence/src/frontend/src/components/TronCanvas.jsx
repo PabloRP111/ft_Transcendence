@@ -1,4 +1,3 @@
-// src/components/TronCanvas.jsx
 import { useEffect, useRef } from "react";
 
 function TronCanvas({ engineState, config }) {
@@ -17,37 +16,41 @@ function TronCanvas({ engineState, config }) {
 
     const render = () => {
       if (!engineState) return;
-      if (engineState.roundOver) {
-        context.clearRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-        context.fillStyle = "#04070b";
-        context.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-        return;
-      }
 
-      const { board, players } = engineState;
+      context.save(); 
+      context.fillStyle = "#000000";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.restore();
 
-      context.clearRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
-      context.fillStyle = "#04070b";
-      context.fillRect(0, 0, ARENA_WIDTH, ARENA_HEIGHT);
+      if (!engineState.roundOver) {
+        const { board, players } = engineState;
 
-      for (let y = 0; y < (config?.gridHeight || 20); y++) {
-        for (let x = 0; x < (config?.gridWidth || 20); x++) {
-          const cell = board[y * (config?.gridWidth || 20) + x];
-          if (cell === 0) continue;
-          context.fillStyle = config?.playerColors?.[cell] ?? "#d8fbff";
-          context.fillRect(x * (config?.cellSize || 20), y * (config?.cellSize || 20), config?.cellSize || 20, config?.cellSize || 20);
+        for (let y = 0; y < (config?.gridHeight || 20); y++) {
+          for (let x = 0; x < (config?.gridWidth || 20); x++) {
+            const cell = board[y * (config?.gridWidth || 20) + x];
+            if (cell === 0) continue;
+
+            context.fillStyle = config?.playerColors?.[cell] ?? "#d8fbff";
+            context.fillRect(
+              x * (config?.cellSize || 20),
+              y * (config?.cellSize || 20),
+              config?.cellSize || 20,
+              config?.cellSize || 20
+            );
+          }
         }
-      }
 
-      for (const player of players) {
-        if (!player.alive) continue;
-        context.fillStyle = "#f8ffff";
-        context.fillRect(
-          player.x * (config?.cellSize || 20),
-          player.y * (config?.cellSize || 20),
-          config?.cellSize || 20,
-          config?.cellSize || 20
-        );
+        for (const player of players) {
+          if (!player.alive) continue;
+
+          context.fillStyle = "#f8ffff";
+          context.fillRect(
+            player.x * (config?.cellSize || 20),
+            player.y * (config?.cellSize || 20),
+            config?.cellSize || 20,
+            config?.cellSize || 20
+          );
+        }
       }
       animationFrameId = window.requestAnimationFrame(render);
     };
@@ -62,7 +65,8 @@ function TronCanvas({ engineState, config }) {
         ref={canvasRef}
         width={ARENA_WIDTH}
         height={ARENA_HEIGHT}
-        className="h-auto w-full rounded-xl border border-cyan-300/40"
+        className="block w-full h-full bg-black"
+        style={{ imageRendering: 'pixelated' }}
       />
     </div>
   );
