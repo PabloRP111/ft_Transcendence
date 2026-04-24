@@ -64,6 +64,7 @@ export default function InviteModal() {
 
     // Target side: incoming invite
     socket.on("gameInviteReceived", ({ inviterId, inviterUsername }) => {
+      setAccepting(false); // reset stale accepting state from a previous invite
       setIncoming({ inviterId, inviterUsername });
     });
 

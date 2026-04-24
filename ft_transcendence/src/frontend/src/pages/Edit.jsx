@@ -86,6 +86,11 @@ export default function EditProfilePage() {
     if (!file) return;
     if (!userId) return;
     if (!/(image\/jpeg|image\/png)/.test(file.type)) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Avatar must be 2 MB or less.");
+      e.target.value = "";
+      return;
+    }
 
     if (avatarUrlRef.current) URL.revokeObjectURL(avatarUrlRef.current);
     const previewUrl = URL.createObjectURL(file);
