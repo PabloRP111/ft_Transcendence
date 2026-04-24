@@ -161,6 +161,16 @@ export function initSocket(io) {
         }
 
         game.to(matchId).emit("state_update", state);
+
+        if (state.matchOver) {
+          if (!state._scoreCommitted) {
+            state._scoreCommitted = true;
+            const results = buildScoreResults(state);
+            await postMatchResult(results);
+          }
+          game.in(matchId).disconnectSockets(true);
+          deleteMatch(matchId);
+        }
         continue;
       }
       // NORMAL GAME

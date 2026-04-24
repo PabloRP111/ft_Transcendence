@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"; // Añade esto
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
 	Cpu,
@@ -16,6 +16,7 @@ import LightCycles from "../components/LightCycles";
 import ChatModule from "../components/ChatModule.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { apiFetch } from "../api/client";
+import { getPvpMatch } from "../api/game";
 import { getCurrentUser } from "../api/users.js";
 import { getFriends } from "../api/friends.js";
 import { useNavigate } from "react-router-dom";
@@ -55,7 +56,18 @@ export default function GridLanding() {
 	const [friendIds, setFriendIds] = useState([]);
 	const [chatCollapsed, setChatCollapsed] = useState(false);
 	const [rankingCollapsed, setRankingCollapsed] = useState(false);
+	const [activeMatchId, setActiveMatchId] = useState(() => localStorage.getItem("activeMatch"));
+	const expireTimerRef = useRef(null);
 	const pageSize = 8;
+
+	useEffect(() => {
+		const handleActiveMatchChange = (event) => {
+			setActiveMatchId(event.detail ?? localStorage.getItem("activeMatch"));
+		};
+
+		window.addEventListener("active-match-changed", handleActiveMatchChange);
+		return () => window.removeEventListener("active-match-changed", handleActiveMatchChange);
+	}, []);
 
 	useEffect(() => {
 		if (isAuthenticated) {
@@ -125,7 +137,61 @@ export default function GridLanding() {
 	const safePage = Math.min(rankingPage, totalPages - 1);
 	const pageStart = safePage * pageSize;
 	const pageItems = filteredPlayers.slice(pageStart, pageStart + pageSize);
-	const matchId = localStorage.getItem("activeMatch");
+	useEffect(() => {
+		if (!loading && !isAuthenticated) {
+			localStorage.removeItem("activeMatch");
+			setActiveMatchId(null);
+			return;
+		}
+
+		if (!activeMatchId) return;
+
+		let cancelled = false;
+
+		if (expireTimerRef.current) {
+			clearTimeout(expireTimerRef.current);
+			expireTimerRef.current = null;
+		}
+
+		getPvpMatch(activeMatchId)
+			.then((state) => {
+				if (cancelled) return;
+
+				if (state?.matchOver || state?.status === "finished") {
+					localStorage.removeItem("activeMatch");
+					setActiveMatchId(null);
+					return;
+				}
+
+				if (state?.status === "paused" && state?.pause?.startedAt && state?.pause?.timeoutMs) {
+					const elapsed = Date.now() - state.pause.startedAt;
+					const remainingMs = Math.max(0, state.pause.timeoutMs - elapsed);
+
+					expireTimerRef.current = window.setTimeout(() => {
+						localStorage.removeItem("activeMatch");
+						setActiveMatchId(null);
+						window.dispatchEvent(new CustomEvent("match-expired"));
+						window.location.reload();
+					}, remainingMs);
+				}
+
+				setActiveMatchId(activeMatchId);
+			})
+			.catch(() => {
+				if (!cancelled) {
+					localStorage.removeItem("activeMatch");
+					setActiveMatchId(null);
+				}
+			});
+
+		return () => {
+			if (expireTimerRef.current) {
+				clearTimeout(expireTimerRef.current);
+				expireTimerRef.current = null;
+			}
+			cancelled = true;
+		};
+	}, [isAuthenticated, loading, activeMatchId]);
 
 	return (
 		<div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
@@ -311,15 +377,15 @@ export default function GridLanding() {
 					>
 						<button
 							onClick={() => {
-								if (matchId) {
-									navigate("/online-game", { state: { matchId } });
+								if (activeMatchId) {
+									navigate("/online-game", { state: { matchId: activeMatchId } });
 								} else {
 									window.location.href = "/online-game";
 								}
 								}}
 							className="neon-button w-full py-3 text-lg uppercase tracking-normal flex justify-center transition-all"
 						>
-							{matchId ? "RECONNECT" : "ONLINE GAME"}
+								{activeMatchId ? "RECONNECT" : "ONLINE GAME"}
 						</button>
 
 						<button

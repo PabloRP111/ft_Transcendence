@@ -8,11 +8,14 @@ export function useTronPvP(matchId) {
   const [state, setState] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [playerId, setPlayerId] = useState(null);
+  const [invalidMatch, setInvalidMatch] = useState(false);
 
   const socketRef = useRef(null);
 
   useEffect(() => {
     if (!matchId || !accessToken) return;
+
+    setInvalidMatch(false);
 
     // Reset game state so the previous match's result overlay doesn't persist
     // while the new socket connection is being established.
@@ -26,6 +29,10 @@ export function useTronPvP(matchId) {
         if (!mounted) return;
 
         setPlayerId(res.playerId);
+        localStorage.setItem("activeMatch", matchId);
+        window.dispatchEvent(
+          new CustomEvent("active-match-changed", { detail: matchId })
+        );
 
         if (socketRef.current) {
           socketRef.current.disconnect();
@@ -43,9 +50,28 @@ export function useTronPvP(matchId) {
         });
 
         socket.on("state_update", (gameState) => {
-          setState(gameState);
+          const board = gameState?.board;
+          const normalizedBoard = board?.data
+            ? board.data
+            : board instanceof ArrayBuffer
+              ? new Uint8Array(board)
+              : board;
+
+          setState({
+            ...gameState,
+            board: normalizedBoard,
+          });
           if (gameState.status === "playing") {
             localStorage.setItem("activeMatch", matchId);
+            window.dispatchEvent(
+              new CustomEvent("active-match-changed", { detail: matchId })
+            );
+          }
+          if (gameState.matchOver) {
+            localStorage.removeItem("activeMatch");
+            window.dispatchEvent(
+              new CustomEvent("active-match-changed", { detail: null })
+            );
           }
         });
 
@@ -60,9 +86,19 @@ export function useTronPvP(matchId) {
         socketRef.current = socket;
 
       } catch (error) {
-        if (error.message.includes("Match not found")) {
+        const message = String(error?.message || "");
+        if (
+          message.includes("Match not found") ||
+          message.includes("Match full") ||
+          message.includes("Not a PvP match") ||
+          message.includes("Forbidden")
+        ) {
           localStorage.removeItem("activeMatch");
+          window.dispatchEvent(
+            new CustomEvent("active-match-changed", { detail: null })
+          );
           setState(null);
+          setInvalidMatch(true);
           return;
         }
       }
@@ -90,6 +126,7 @@ export function useTronPvP(matchId) {
     state,
     isConnected,
     playerId,
+    invalidMatch,
     isPlaying: state?.status === "playing",
     sendMove,
     config: {

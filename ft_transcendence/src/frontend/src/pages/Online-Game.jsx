@@ -68,7 +68,7 @@ export default function TronPvpArena() {
   const [matchId, setMatchId] = useState(
     location.state?.matchId ?? localStorage.getItem("activeMatch")
   );
-  const { config, state, matchResult, sendMove } = useTronPvP(matchId);
+  const { config, state, matchResult, sendMove, invalidMatch } = useTronPvP(matchId);
   const isInviteGame = !!location.state?.matchId;
   const [remainingTime, setRemainingTime] = useState(null);
   
@@ -85,7 +85,13 @@ export default function TronPvpArena() {
     }
   }, [location.state?.matchId]);
 
-  const ready = state?.status === "playing" || state?.status === "paused";
+  useEffect(() => {
+    if (invalidMatch) {
+      setMatchId(null);
+    }
+  }, [invalidMatch]);
+
+  const ready = state?.matchOver || state?.status === "playing" || state?.status === "paused";
 
   // MATCHMAKING
   useEffect(() => {
@@ -205,7 +211,7 @@ export default function TronPvpArena() {
   const isLoading =
     !matchId ||
     !state ||
-    (state.status !== "playing" && state.status !== "paused");
+    (!state.matchOver && state.status !== "playing" && state.status !== "paused");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-cyan-50">
