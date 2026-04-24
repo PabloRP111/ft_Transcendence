@@ -4,6 +4,7 @@ import { Send, ArrowLeft, LogOut, UserPlus, Clock, UserCheck, Swords, ShieldOff,
 import { useNavigate } from "react-router-dom";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
+import { useActiveMatch } from "../../hooks/useActiveMatch";
 
 export default function ChatView({
   activeConversation,
@@ -26,6 +27,7 @@ export default function ChatView({
 }) {
   const scrollRef = useRef(null);
   const onlineUsers = usePresence();
+  const hasActiveMatch = useActiveMatch();
   const navigate = useNavigate();
 
   const isDM = activeConversation?.type === "private";
@@ -97,8 +99,8 @@ export default function ChatView({
             </div>
           )}
         </div>
-        {/* Challenge button — only for DMs when the other user is online and not blocked */}
-        {isDM && isOtherOnline && !isBlocked && (
+        {/* Challenge button — only for DMs when the other user is online, not blocked, and neither player is in an active match */}
+        {isDM && isOtherOnline && !isBlocked && !hasActiveMatch && (
           <button
             onClick={onGameInvite}
             className="text-cyan-100/20 hover:text-cyan-300 transition-colors"

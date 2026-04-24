@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Plus, LogOut, Swords, ArrowUpDown } from "lucide-react";
 import { convDisplayName } from "../../utils/chatStorage";
 import { usePresence } from "../../context/PresenceContext";
+import { useActiveMatch } from "../../hooks/useActiveMatch";
 
 export default function InboxView({
   conversations,
@@ -15,6 +16,7 @@ export default function InboxView({
   onGameInvite,
 }) {
   const onlineUsers = usePresence();
+  const hasActiveMatch = useActiveMatch();
   const [page, setPage] = useState(0);
   const pageSize = 8;
   const [sortAlpha, setSortAlpha] = useState(false);
@@ -138,7 +140,7 @@ export default function InboxView({
                     </span>
                   )}
                 </div>
-                {conv.type === "private" && isOnline && !blockedConvIds.has(conv.id) && (
+                {conv.type === "private" && isOnline && !blockedConvIds.has(conv.id) && !hasActiveMatch && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onGameInvite?.(conv); }}
                     className="flex-shrink-0 text-cyan-100/20 hover:text-cyan-300 transition-colors"

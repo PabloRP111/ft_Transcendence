@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { usePresence } from "../context/PresenceContext";
 import { useSocket } from "../context/SocketContext";
 import { sendGameInvite } from "../utils/gameInvite";
+import { useActiveMatch } from "../hooks/useActiveMatch";
 import { sanitizeSearch } from "../utils/security"
 
 const TABS = ["Stats", "Social"];
@@ -20,6 +21,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const onlineUsers = usePresence();
   const { socketRef } = useSocket();
+  const hasActiveMatch = useActiveMatch();
 
   const [profile, setProfile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -399,8 +401,8 @@ export default function ProfilePage() {
                                     <MessageSquare size={11} /> DM
                                   </button>
                                 )}
-                                {/* Challenge button — only if online and no block */}
-                                {fs !== "blocked" && fs !== "blocked_by" && onlineUsers.has(String(u.id)) && (
+                                {/* Challenge button — only if online, no block, and not in an active match */}
+                                {fs !== "blocked" && fs !== "blocked_by" && onlineUsers.has(String(u.id)) && !hasActiveMatch && (
                                   <button
                                     onClick={() => sendGameInvite(socketRef, u.id, u.username)}
                                     className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded hover:bg-yellow-500/10 transition-colors"
@@ -495,7 +497,7 @@ export default function ProfilePage() {
                       <div className="space-y-2">
                         {friends.filter((f) => onlineUsers.has(String(f.id))).map((f) => (
                           <FriendRow key={f.id} friend={f} online navigate={navigate}
-                            onChallenge={() => sendGameInvite(socketRef, f.id, f.username)}
+                            onChallenge={!hasActiveMatch ? () => sendGameInvite(socketRef, f.id, f.username) : null}
                             onRemove={async () => { await removeFriend(f.id).catch(() => {}); setFriends((prev) => prev.filter((x) => x.id !== f.id)); }} />
                         ))}
                       </div>
@@ -593,7 +595,7 @@ function FriendRow({ friend, online, navigate, onChallenge, onRemove }) {
         >
           <MessageSquare size={11} /> DM
         </button>
-        {online && (
+        {online && onChallenge && (
           <button
             onClick={onChallenge}
             className="flex items-center gap-1 text-[9px] uppercase tracking-widest border border-yellow-500/30 text-yellow-400 px-2 py-1 rounded hover:bg-yellow-500/10 transition-colors"

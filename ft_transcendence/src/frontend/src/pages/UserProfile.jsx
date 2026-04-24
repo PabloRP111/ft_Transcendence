@@ -10,6 +10,7 @@ import { usePresence } from "../context/PresenceContext";
 import { getStoredToken, decodeToken } from "../utils/auth";
 import { useSocket } from "../context/SocketContext";
 import { sendGameInvite } from "../utils/gameInvite";
+import { useActiveMatch } from "../hooks/useActiveMatch";
 import userimage from "../assets/userimage.png";
 
 export default function UserProfile() {
@@ -18,6 +19,7 @@ export default function UserProfile() {
   const onlineUsers = usePresence();
   const { socketRef } = useSocket();
 
+  const hasActiveMatch = useActiveMatch();
   const [profile, setProfile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [status, setStatus] = useState("loading");
@@ -245,8 +247,8 @@ export default function UserProfile() {
                 >
                   <MessageSquare size={14} /> DM
                 </button>
-                {/* Challenge button — only shown when target is online */}
-                {isOnline && (
+                {/* Challenge button — only shown when target is online and neither player is in an active match */}
+                {isOnline && !hasActiveMatch && (
                   <button
                     onClick={() => {
                       sendGameInvite(socketRef, profile.id, profile.username);

@@ -1,6 +1,6 @@
 import express from "express";
 import { createMatchState } from "../engine/engine.js";
-import { createMatch, getMatch, getAllMatches } from "../engine/matchStore.js";
+import { createMatch, getMatch, getAllMatches, isUserInActiveMatch } from "../engine/matchStore.js";
 
 const router = express.Router();
 
@@ -68,6 +68,10 @@ router.post("/join", (req, res) => {
 
   if (!player)
     return res.status(400).json({ error: "Match full" });
+
+  // Prevent joining a new match while already in an active (playing/paused/waiting) one
+  if (isUserInActiveMatch(userId))
+    return res.status(409).json({ error: "Already in an active match" });
 
   player.userId = userId;
   player.connected = true;
