@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react"; // Añade esto
 import { motion } from "framer-motion";
-import { Cpu, Trophy, ChevronUp, ChevronDown, ArrowUpDown, Users } from "lucide-react";
+import {
+	Cpu,
+	Trophy,
+	ChevronUp,
+	ChevronDown,
+	ArrowUpDown,
+	Users,
+	ChevronLeft,
+	ChevronRight,
+} from "lucide-react";
 import Footer from "../components/Footer.jsx";
 import Navbar from "../components/Navbar.jsx";
 import LightCycles from "../components/LightCycles";
@@ -44,6 +53,8 @@ export default function GridLanding() {
 	const [showFriendsOnly, setShowFriendsOnly] = useState(false);
 	const [currentUserId, setCurrentUserId] = useState(null);
 	const [friendIds, setFriendIds] = useState([]);
+	const [chatCollapsed, setChatCollapsed] = useState(false);
+	const [rankingCollapsed, setRankingCollapsed] = useState(false);
 	const pageSize = 9;
 
 	useEffect(() => {
@@ -130,17 +141,58 @@ export default function GridLanding() {
 
 			{/* ── CHAT SIDEBAR (Only for Authenticated Users) ── */}
 			{!loading && isAuthenticated && (
-				<aside className="hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center w-80 xl:w-96">
-					<div className="w-full h-[70vh] max-h-[600px]">
-						<ChatModule />
+				<aside
+					className={`hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center transition-all duration-300 ${
+						chatCollapsed ? "w-12" : "w-80 xl:w-96"
+					}`}
+				>
+					<div className="relative w-full h-[70vh] max-h-[600px] pt-10">
+						<button
+							className="neon-button absolute right-2 top-2 px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+							onClick={() => setChatCollapsed((value) => !value)}
+							aria-label={chatCollapsed ? "Open chat sidebar" : "Collapse chat sidebar"}
+							title={chatCollapsed ? "Open chat" : "Collapse chat"}
+						>
+							{chatCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+							{chatCollapsed ? "CHAT" : "HIDE"}
+						</button>
+						<div
+							className={`w-full h-full transition-all duration-300 ${
+								chatCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+							}`}
+						>
+							<ChatModule />
+						</div>
 					</div>
 				</aside>
 			)}
 
 			{/* ── RANKING SIDEBAR ── */}
 			{!loading && isAuthenticated && (
-				<aside className="hidden lg:flex fixed right-4 sm:right-6 lg:right-8 top-24 bottom-12 z-40 items-center justify-center w-72 sm:w-80 xl:w-96">
-					<div className="w-full h-[70vh] max-h-[600px] neon-panel bg-black/20 backdrop-blur-sm p-4 flex flex-col">
+				<aside
+					className={`hidden lg:flex fixed right-4 sm:right-6 lg:right-8 top-24 bottom-12 z-40 items-center justify-center transition-all duration-300 overflow-visible ${
+						rankingCollapsed ? "w-12" : "w-72 sm:w-80 xl:w-96"
+					}`}
+				>
+					<div
+						className={`relative w-full h-[70vh] max-h-[600px] flex flex-col transition-all duration-300 ${
+							rankingCollapsed ? "pt-10" : "neon-panel bg-black/20 backdrop-blur-sm p-4 pt-10"
+						}`}
+					>
+						<button
+							className="neon-button absolute left-2 top-2 px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+							onClick={() => setRankingCollapsed((value) => !value)}
+							aria-label={rankingCollapsed ? "Open ranking sidebar" : "Collapse ranking sidebar"}
+							title={rankingCollapsed ? "Open ranking" : "Collapse ranking"}
+						>
+							{rankingCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+							{rankingCollapsed ? "RANK" : "HIDE"}
+						</button>
+						<div
+							className={`flex flex-col flex-1 transition-all duration-300 ${
+								rankingCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"
+							}`}
+						>
 						<div className="grid grid-cols-[1fr_auto_1fr] items-center mb-4">
 							<div className="flex justify-start">
 								<button
@@ -228,6 +280,7 @@ export default function GridLanding() {
 								Next
 								<ChevronDown size={14} />
 							</button>
+						</div>
 						</div>
 					</div>
 				</aside>

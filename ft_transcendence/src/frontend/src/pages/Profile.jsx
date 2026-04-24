@@ -172,7 +172,7 @@ export default function ProfilePage() {
           {/* Back button */}
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
+            className="absolute left-6 top-6 z-30 pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
           >
             <ArrowLeft size={18} />
           </button>
@@ -180,7 +180,7 @@ export default function ProfilePage() {
           {/* Edit button */}
           <button
             onClick={() => navigate("/edit")}
-            className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
+            className="absolute right-6 top-6 z-30 pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-cyan-500/30 text-cyan-100 hover:bg-cyan-500/10 transition-colors"
           >
             <Pencil size={18} />
           </button>
