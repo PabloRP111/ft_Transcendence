@@ -4,9 +4,9 @@ services:
     container_name: transcendence_postgres
     restart: always
     environment:
-      POSTGRES_USER: transcendence
-      POSTGRES_PASSWORD: transcendence
-      POSTGRES_DB: transcendence
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/db:/docker-entrypoint-initdb.d
@@ -33,7 +33,7 @@ services:
     restart: on-failure
     environment:
       #connect to postgres container using service name as hostname
-      DATABASE_URL: postgresql://transcendence:transcendence@postgres:5432/transcendence
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       #shared JWT secret (from .env), must match the value used by all other services
       JWT_SECRET: ${JWT_ACCESS_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
@@ -44,6 +44,12 @@ services:
 
   users:
     build: ./backend/micro_services/users
+    environment:
+      SEED_PASSWORD_FEMORENO: ${SEED_PASSWORD_FEMORENO}
+      SEED_PASSWORD_PROSAS: ${SEED_PASSWORD_PROSAS}
+      SEED_PASSWORD_AAMOROS: ${SEED_PASSWORD_AAMOROS}
+      SEED_PASSWORD_MZULOAGA: ${SEED_PASSWORD_MZULOAGA}
+      SEED_PASSWORD_JOTRUJIL: ${SEED_PASSWORD_JOTRUJIL}
     networks:
       - transcendence
     depends_on:

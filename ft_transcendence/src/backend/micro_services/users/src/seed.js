@@ -5,7 +5,7 @@ const users = [
   {
     email: "femoreno@student.42malaga.com",
     username: "femoreno",
-    password: "femoreno@admin",
+    password: process.env.SEED_PASSWORD_FEMORENO,
     avatar: "./assets/credits/femoreno.png",
     wins: 0,
     matches: 777,
@@ -15,7 +15,7 @@ const users = [
   {
     email: "prosas-p@student.42malaga.com",
     username: "prosas-p",
-    password: "prosas@admin",
+    password: process.env.SEED_PASSWORD_PROSAS,
     avatar: "./assets/credits/prosas.png",
     wins: 12,
     matches: 12,
@@ -25,7 +25,7 @@ const users = [
   {
     email: "aamoros-@student.42malaga.com",
     username: "aamoros-",
-    password: "aamoros@admin",
+    password: process.env.SEED_PASSWORD_AAMOROS,
     avatar: "./assets/credits/aamoros.png",
     wins: 7,
     matches: 7,
@@ -35,7 +35,7 @@ const users = [
   {
     email: "mzuloaga@student.42malaga.com",
     username: "mzuloaga",
-    password: "mzuloaga@admin",
+    password: process.env.SEED_PASSWORD_MZULOAGA,
     avatar: "./assets/credits/mzuloaga.png",
     wins: 9,
     matches: 9,
@@ -45,7 +45,7 @@ const users = [
   {
     email: "jotrujil@student.42malaga.com",
     username: "jotrujil",
-    password: "jotrujil@admin",
+    password: process.env.SEED_PASSWORD_JOTRUJIL,
     avatar: "./assets/credits/jotrujil.png",
     wins: 8,
     matches: 8,
@@ -53,6 +53,12 @@ const users = [
     rank: 4
   }
 ];
+
+const missing = users.filter(u => !u.password).map(u => u.username);
+if (missing.length > 0) {
+  console.error(`Missing seed password env vars for: ${missing.join(", ")}`);
+  process.exit(1);
+}
 
 async function seed() {
   for (const u of users) {
