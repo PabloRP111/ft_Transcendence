@@ -20,23 +20,23 @@ function MatchmakingLoader() {
             initial={{ scale: 0, opacity: 0.5 }}
             animate={{ scale: 4, opacity: 0 }}
             transition={{ repeat: Infinity, duration: 3, delay: i }}
-            className="absolute h-64 w-64 rounded-full border border-cyan-500"
+            className="absolute h-32 w-32 rounded-full border border-cyan-500"
           />
         ))}
       </div>
 
-      <motion.div className="relative z-10 flex flex-col items-center gap-8">
+      <motion.div className="relative z-10 flex flex-col items-center gap-5">
         <div className="relative">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-            className="p-8 rounded-full border-2 border-dashed border-cyan-500/50"
+            className="p-5 rounded-full border-2 border-dashed border-cyan-500/50"
           >
-            <Search size={48} className="text-cyan-400" />
+            <Search size={28} className="text-cyan-400" />
           </motion.div>
         </div>
 
-        <h2 className="text-2xl font-black tracking-[0.5em] text-cyan-400 uppercase">
+        <h2 className="text-sm font-black tracking-[0.25em] text-cyan-400 uppercase text-center px-4">
           Searching for Opponent
         </h2>
       </motion.div>
@@ -248,22 +248,22 @@ export default function TronPvpArena() {
               <motion.section
                 initial={{ x: -200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
+                className="flex w-28 sm:w-32 min-[1000px]:w-64 flex-col items-center gap-3 min-[1000px]:gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-3 sm:p-4 min-[1000px]:p-8 backdrop-blur"
               >
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
+                  <div className="flex h-12 w-12 min-[1000px]:h-24 min-[1000px]:w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
                     {avatars[state.players[0]?.userId] ? (
                       <img
                         src={avatars[state.players[0]?.userId]}
                         className="h-full w-full object-cover rounded-full brightness-125 contrast-110"
                       />
                     ) : (
-                      <UserRound size={50} className="text-cyan-400" />
+                      <UserRound size={50} className="text-cyan-400 w-6 h-6 min-[1000px]:w-[50px] min-[1000px]:h-[50px]" />
                     )}
                   </div>
                   <div className="absolute -bottom-2 right-0 rounded bg-cyan-500 px-2 py-0.5 text-[10px] font-bold text-black">P1</div>
                 </div>
-                <h2 className="text-xl uppercase tracking-[0.2em] text-cyan-300">{state.players[0]?.name || "Player 1"}</h2>
+                <h2 className="text-sm min-[1000px]:text-xl uppercase tracking-[0.2em] text-cyan-300">{state.players[0]?.name || "Player 1"}</h2>
                 <Lives lives={state.players[0]?.lives} maxLives={config.startingLives} />
               </motion.section>
 
@@ -340,22 +340,22 @@ export default function TronPvpArena() {
               <motion.section
                 initial={{ x: 200, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-pink-500/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
+                className="flex w-28 sm:w-32 min-[1000px]:w-64 flex-col items-center gap-3 min-[1000px]:gap-6 rounded-xl border border-pink-500/30 bg-black/40 p-3 sm:p-4 min-[1000px]:p-8 backdrop-blur"
               >
                 <div className="relative">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full border border-pink-500/40 shadow-[0_0_40px_#ff007f]">
+                  <div className="flex h-12 w-12 min-[1000px]:h-24 min-[1000px]:w-24 items-center justify-center rounded-full border border-pink-500/40 shadow-[0_0_40px_#ff007f]">
                     {avatars[state.players[1]?.userId] ? (
                       <img
                         src={avatars[state.players[1]?.userId]}
                         className="h-full w-full object-cover rounded-full brightness-125 contrast-110"
                       />
                     ) : (
-                      <UserRound size={50} className="text-cyan-400" />
+                      <UserRound size={50} className="text-cyan-400 w-6 h-6 min-[1000px]:w-[50px] min-[1000px]:h-[50px]" />
                     )}
                   </div>
                   <div className="absolute -bottom-2 left-0 rounded bg-pink-500 px-2 py-0.5 text-[10px] font-bold text-black">P2</div>
                 </div>
-                <h2 className="text-xl uppercase tracking-[0.2em] text-pink-500">{state.players[1]?.name || "Waiting..."}</h2>
+                <h2 className="text-sm min-[1000px]:text-xl uppercase tracking-[0.2em] text-pink-500">{state.players[1]?.name || "Waiting..."}</h2>
                 <Lives lives={state.players[1]?.lives} maxLives={config.startingLives} />
               </motion.section>
             </main>

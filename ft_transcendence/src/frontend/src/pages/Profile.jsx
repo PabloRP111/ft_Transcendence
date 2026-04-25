@@ -251,9 +251,9 @@ export default function ProfilePage() {
                 <img src={avatarUrl} alt="User Profile" className="h-full w-full object-cover" />
               ) : null}
             </div>
-            <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-y-1/2 translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
+            <div className="absolute left-1/2 top-1/2 flex h-16 w-16 min-[350px]:h-20 min-[350px]:w-20 -translate-y-1/2 translate-x-14 min-[350px]:translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
               <span className="text-[9px] uppercase tracking-[0.2em]">Rank</span>
-              <span className="text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
+              <span className="text-lg min-[350px]:text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
             </div>
           </div>
 

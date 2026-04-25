@@ -37,7 +37,6 @@ export function SocketProvider({ children }) {
     socket.on("disconnect", () => setConnected(false));
 
     socket.on("force-logout", () => {
-      console.warn("[socket] Force-logout received from server.");
       logoutUser();
     });
 
@@ -48,13 +47,11 @@ export function SocketProvider({ children }) {
         // If the refresh succeeds, accessToken state changes and this effect
         // re-runs, creating a new socket with the fresh token.
         // If the refresh fails (refresh token also gone), tryRefresh calls logoutUser.
-        console.warn("[socket] Token expired on reconnect — attempting silent refresh.");
         socket.disconnect();
         tryRefresh();
         return;
       }
       if (err.message === "missing token") {
-        console.error("[socket] Auth error: missing token.");
         logoutUser();
       }
     });

@@ -57,6 +57,9 @@ export default function GridLanding() {
 	const [chatCollapsed, setChatCollapsed] = useState(false);
 	const [rankingCollapsed, setRankingCollapsed] = useState(false);
 	const [activeMatchId, setActiveMatchId] = useState(() => localStorage.getItem("activeMatch"));
+	const [mobileChatOpen, setMobileChatOpen] = useState(false);
+	const [mobileRankOpen, setMobileRankOpen] = useState(false);
+	const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
 	const expireTimerRef = useRef(null);
 	const pageSize = 8;
 
@@ -193,6 +196,16 @@ export default function GridLanding() {
 		};
 	}, [isAuthenticated, loading, activeMatchId]);
 
+	useEffect(() => {
+		const handler = () => setIsMobile(window.innerWidth < 1024);
+		window.addEventListener("resize", handler);
+		return () => window.removeEventListener("resize", handler);
+	}, []);
+
+	useEffect(() => {
+		if (!isMobile) setMobileChatOpen(false);
+	}, [isMobile]);
+
 	return (
 		<div className="relative flex flex-col min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
 
@@ -207,9 +220,9 @@ export default function GridLanding() {
 			<Navbar />
 
 			{/* ── CHAT SIDEBAR (Only for Authenticated Users) ── */}
-			{!loading && isAuthenticated && (
+			{!isMobile && !loading && isAuthenticated && (
 				<aside
-					className={`hidden lg:flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center transition-all duration-300 ${
+					className={`flex fixed left-8 top-24 bottom-12 z-40 items-center justify-center transition-all duration-300 ${
 						chatCollapsed ? "w-12" : "w-80 xl:w-96"
 					}`}
 				>
@@ -404,6 +417,103 @@ export default function GridLanding() {
 						Arena Core Online
 					</motion.div>
 				</motion.section>
+
+				{/* ── MOBILE CHAT + RANK (small screens only) ── */}
+				{!loading && isAuthenticated && (
+					<motion.div variants={itemVariants} className="lg:hidden w-full max-w-3xl mt-4 flex flex-col gap-3">
+
+						{/* Chat accordion */}
+						<div className="neon-panel bg-black/20 backdrop-blur-sm overflow-hidden">
+							<button
+								className="neon-button w-full px-4 py-3 text-[10px] uppercase tracking-widest flex items-center justify-between"
+								onClick={() => setMobileChatOpen((v) => !v)}
+							>
+								<span>CHAT</span>
+								{mobileChatOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+							</button>
+							{mobileChatOpen && (
+								<div className="h-80">
+									<ChatModule />
+								</div>
+							)}
+						</div>
+
+						{/* Ranking accordion */}
+						<div className="neon-panel bg-black/20 backdrop-blur-sm overflow-hidden">
+							<button
+								className="neon-button w-full px-4 py-3 text-[10px] uppercase tracking-widest flex items-center justify-between"
+								onClick={() => setMobileRankOpen((v) => !v)}
+							>
+								<span className="flex items-center gap-2"><Trophy size={14} /> RANKING</span>
+								{mobileRankOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+							</button>
+							{mobileRankOpen && (
+								<div className="p-4 flex flex-col gap-3">
+									<div className="flex items-center justify-between mb-2">
+										<button
+											className="neon-button px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+											onClick={() => { setShowFriendsOnly((v) => !v); setRankingPage(0); }}
+										>
+											<Users size={14} />
+											{showFriendsOnly ? "FRIENDS" : "ALL"}
+										</button>
+										<Trophy className="text-yellow-500" size={24} />
+										<button
+											className="neon-button px-2 py-2 text-[10px] uppercase tracking-widest flex items-center gap-2"
+											onClick={() => { setRankingAsc((v) => !v); setRankingPage(0); }}
+										>
+											<ArrowUpDown size={14} />
+											{rankingAsc ? "ASC" : "DESC"}
+										</button>
+									</div>
+									<h2 className="text-center text-cyan-300 uppercase tracking-widest text-sm mb-2">
+										Top Players
+									</h2>
+									<div className="space-y-2 overflow-y-auto max-h-64 custom-scrollbar">
+										{rankingLoading ? (
+											<div className="text-center text-[10px] text-cyan-500 animate-pulse mt-4">LOADING_RANKING...</div>
+										) : pageItems.length > 0 ? (
+											pageItems.map((player, index) => (
+												<div
+													key={player.id || index}
+													onClick={() => navigate(`/profile/${player.username}`)}
+													className="flex justify-between items-center px-3 py-2 rounded-md border border-cyan-500/20 bg-black/30 hover:border-cyan-400/50 hover:bg-cyan-900/20 cursor-pointer transition-all group"
+												>
+													<span className="text-cyan-100 text-sm">
+														<span className="text-cyan-600 mr-2 font-bold">#{pageStart + index + 1}</span>
+														<span className="group-hover:text-cyan-300 transition-colors">{player.username}</span>
+													</span>
+													<span className="text-cyan-400 text-sm font-bold">
+														{player.score} <span className="text-[9px] text-cyan-800">PTS</span>
+													</span>
+												</div>
+											))
+										) : (
+											<div className="text-center text-[10px] text-cyan-700 mt-4">NO_RECORDS_FOUND</div>
+										)}
+									</div>
+									<div className="mt-2 flex items-center justify-between">
+										<button
+											className="neon-button px-3 py-2 text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+											onClick={() => setRankingPage((p) => Math.max(0, p - 1))}
+											disabled={safePage === 0 || totalPages <= 1}
+										>
+											<ChevronUp size={14} /> Prev
+										</button>
+										<span className="text-[10px] text-cyan-500 uppercase tracking-[0.3em]">{safePage + 1} / {totalPages}</span>
+										<button
+											className="neon-button px-3 py-2 text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+											onClick={() => setRankingPage((p) => Math.min(totalPages - 1, p + 1))}
+											disabled={safePage >= totalPages - 1 || totalPages <= 1}
+										>
+											Next <ChevronDown size={14} />
+										</button>
+									</div>
+								</div>
+							)}
+						</div>
+					</motion.div>
+				)}
 
 				{/* Decorative Title */}
 				<motion.h1

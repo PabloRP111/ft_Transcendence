@@ -184,7 +184,7 @@ export default function ChatView({
                   </button>
                 )}:
               </span>
-              <div className={`text-xs p-2 rounded-md font-mono max-w-[90%] ${
+              <div className={`text-xs p-2 rounded-md font-mono max-w-[90%] break-words ${
                 isMe
                   ? "bg-cyan-500/20 border-r-2 border-cyan-400 text-cyan-100"
                   : "bg-cyan-950/40 border-l-2 border-cyan-500/50 text-cyan-50"

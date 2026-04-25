@@ -97,7 +97,7 @@ export default function ChatModule() {
         if (!known) {
           // This is the first message from a brand-new DM — refresh the list
           // so the conversation appears in the inbox.
-          getConversations().then(setConversations).catch(console.error);
+          getConversations().then(setConversations).catch(() => {});
           return prev;
         }
         return prev.map((c) =>
@@ -269,7 +269,7 @@ export default function ChatModule() {
         // Tell the server (and the other participant) that we've read this conversation
         socketRef.current?.emit("markRead", { conversationId: String(activeConversationId) });
       })
-      .catch(console.error);
+      .catch(() => {});
   }, [activeConversationId]);
 
   // ── Compute blocked status for all DMs (for InboxView Swords button) ────────

@@ -134,7 +134,7 @@ router.get("/search", async (req, res) => {
   }
 
   const trimmed = q.trim();
-  if (!trimmed || trimmed.length < 2 || trimmed.length > 50) {
+  if (!trimmed || trimmed.length < 1 || trimmed.length > 50) {
     return res.status(400).json({ error: "Invalid query" });
   }
 

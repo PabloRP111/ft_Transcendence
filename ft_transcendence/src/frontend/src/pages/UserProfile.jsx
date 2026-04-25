@@ -207,9 +207,9 @@ export default function UserProfile() {
             <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-cyan-500/40 shadow-[0_0_20px_rgba(0,247,255,0.3)] overflow-hidden bg-black">
               <img src={avatarUrl || userimage} alt="User Profile" className="h-full w-full object-cover" />
             </div>
-            <div className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-y-1/2 translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
+            <div className="absolute left-1/2 top-1/2 flex h-16 w-16 min-[350px]:h-20 min-[350px]:w-20 -translate-y-1/2 translate-x-14 min-[350px]:translate-x-[4.5rem] flex-col items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-950/10 text-cyan-200">
               <span className="text-[9px] uppercase tracking-[0.2em]">Rank</span>
-              <span className="text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
+              <span className="text-lg min-[350px]:text-2xl font-bold text-[color:var(--tron-text)]">#{profile.rank}</span>
             </div>
           </div>
 
@@ -240,7 +240,7 @@ export default function UserProfile() {
               </button>
             ) : friendStatus !== "blocked_by" && (
               // Normal state — show DM, friend action, and block button
-              <>
+              <div className="grid grid-cols-2 min-[464px]:flex min-[464px]:flex-row gap-3">
                 <button
                   onClick={() => navigate(`/?dm=${profile.id}`)}
                   className="flex items-center gap-2 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs uppercase tracking-widest text-cyan-300 hover:bg-cyan-500/20 transition-colors"
@@ -276,7 +276,7 @@ export default function UserProfile() {
                 >
                   <ShieldOff size={14} />
                 </button>
-              </>
+              </div>
             )}
           </div>
 

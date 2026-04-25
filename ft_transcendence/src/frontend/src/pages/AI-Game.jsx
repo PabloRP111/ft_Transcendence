@@ -110,20 +110,20 @@ export default function TronDuelArena() {
         <motion.section
           initial={{ x: -200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
+          className="flex w-28 sm:w-32 min-[1000px]:w-64 flex-col items-center gap-3 min-[1000px]:gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-3 sm:p-4 min-[1000px]:p-8 backdrop-blur"
         >
-          <div className="flex h-24 w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff] overflow-hidden">
+          <div className="flex h-12 w-12 min-[1000px]:h-24 min-[1000px]:w-24 items-center justify-center rounded-full border border-cyan-300/40 shadow-[0_0_40px_#00f7ff] overflow-hidden">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 className="h-full w-full object-cover"
               />
             ) : (
-              <UserRound size={50} />
+              <UserRound size={50} className="w-6 h-6 min-[1000px]:w-[50px] min-[1000px]:h-[50px]" />
             )}
           </div>
 
-          <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
+          <h2 className="text-sm min-[1000px]:text-xl uppercase tracking-[0.2em] text-gridBlue">
             {username || "Player 1"}
           </h2>
 
@@ -132,7 +132,7 @@ export default function TronDuelArena() {
             maxLives={config.startingLives}
           />
 
-          <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
+          <p className="text-xs min-[1000px]:text-sm uppercase tracking-[0.2em] text-cyan-100/80">
             Matches Won {state?.matchesWon?.[0] ?? 0}
           </p>
         </motion.section>
@@ -176,9 +176,9 @@ export default function TronDuelArena() {
         <motion.section
           initial={{ x: 200, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="flex w-56 sm:w-64 flex-col items-center gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-6 sm:p-8 backdrop-blur"
+          className="flex w-28 sm:w-32 min-[1000px]:w-64 flex-col items-center gap-3 min-[1000px]:gap-6 rounded-xl border border-cyan-300/30 bg-black/40 p-3 sm:p-4 min-[1000px]:p-8 backdrop-blur"
         >
-          <div className="h-24 w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
+          <div className="h-12 w-12 min-[1000px]:h-24 min-[1000px]:w-24 rounded-full overflow-hidden border border-cyan-300/40 shadow-[0_0_40px_#00f7ff]">
             <img
               src={aiAvatar}
               alt="AI Avatar"
@@ -186,7 +186,7 @@ export default function TronDuelArena() {
             />
           </div>
 
-          <h2 className="text-xl uppercase tracking-[0.2em] text-gridBlue">
+          <h2 className="text-sm min-[1000px]:text-xl uppercase tracking-[0.2em] text-gridBlue">
             {player2?.name || "AI_CORE"}
           </h2>
 
@@ -195,7 +195,7 @@ export default function TronDuelArena() {
             maxLives={config.startingLives}
           />
 
-          <p className="text-sm uppercase tracking-[0.2em] text-cyan-100/80">
+          <p className="text-xs min-[1000px]:text-sm uppercase tracking-[0.2em] text-cyan-100/80">
             Matches Won {state?.matchesWon?.[1] ?? 0}
           </p>
         </motion.section>
