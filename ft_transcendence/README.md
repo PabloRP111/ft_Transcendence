@@ -190,17 +190,12 @@ Why PostgreSQL:
 
 ```mermaid
 erDiagram
-    AUTH_USERS ||--o{ AUTH_FRIENDSHIPS : user_id
-    AUTH_USERS ||--o{ AUTH_FRIENDSHIPS : friend_id
-    AUTH_USERS ||--o{ SESSIONS_SESSIONS : user_id
-    CHAT_CONVERSATIONS ||--o{ CHAT_CONVERSATION_PARTICIPANTS : conversation_id
-    CHAT_CONVERSATIONS ||--o{ CHAT_MESSAGES : conversation_id
     AUTH_USERS ||--o{ CHAT_MESSAGES : sender_id
 
     AUTH_USERS {
         int id PK
-        text email UNIQUE
-        text username UNIQUE
+        text email UK
+        text username UK
         text password
         text avatar
         int wins
@@ -221,18 +216,18 @@ erDiagram
     CHAT_CONVERSATIONS {
         int id PK
         text type
-        text name UNIQUE
+        text name UK
         bool is_public
         text description
-        timestamptz created_at
+        timestamp created_at
     }
 
     CHAT_CONVERSATION_PARTICIPANTS {
         int conversation_id PK
         int user_id PK
         text role
-        timestamptz joined_at
-        timestamptz last_read_at
+        timestamp joined_at
+        timestamp last_read_at
     }
 
     CHAT_MESSAGES {
@@ -241,8 +236,8 @@ erDiagram
         int sender_id
         text content
         text type
-        timestamptz created_at
-        timestamptz edited_at
+        timestamp created_at
+        timestamp edited_at
     }
 
     AUTH_FRIENDSHIPS {
@@ -250,7 +245,7 @@ erDiagram
         int user_id
         int friend_id
         text status
-        timestamptz created_at
+        timestamp created_at
     }
 ```
 
