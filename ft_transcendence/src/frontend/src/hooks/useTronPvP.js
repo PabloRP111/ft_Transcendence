@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { joinPvpMatch } from "../api/game";
+import { joinPvpMatch, cancelMatchmaking } from "../api/game";
 import { useAuth } from "../context/AuthContext";
 
 export function useTronPvP(matchId) {
@@ -11,11 +11,13 @@ export function useTronPvP(matchId) {
   const [invalidMatch, setInvalidMatch] = useState(false);
 
   const socketRef = useRef(null);
+  const statusRef = useRef(null);
 
   useEffect(() => {
     if (!matchId || !accessToken) return;
 
     setInvalidMatch(false);
+    statusRef.current = null;
 
     // Reset game state so the previous match's result overlay doesn't persist
     // while the new socket connection is being established.
@@ -57,6 +59,7 @@ export function useTronPvP(matchId) {
               ? new Uint8Array(board)
               : board;
 
+          statusRef.current = gameState.status;
           setState({
             ...gameState,
             board: normalizedBoard,
@@ -109,8 +112,14 @@ export function useTronPvP(matchId) {
     return () => {
       mounted = false;
 
+      if (!statusRef.current || statusRef.current === "waiting") {
+        localStorage.removeItem("activeMatch");
+        window.dispatchEvent(new CustomEvent("active-match-changed", { detail: null }));
+        cancelMatchmaking().catch(() => {});
+      }
+
       if (socketRef.current) {
-        socketRef.current.off(); 
+        socketRef.current.off();
         socketRef.current.disconnect();
         socketRef.current = null;
       }

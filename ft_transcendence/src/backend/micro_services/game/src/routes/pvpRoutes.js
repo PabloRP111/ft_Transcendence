@@ -1,6 +1,6 @@
 import express from "express";
 import { createMatchState } from "../engine/engine.js";
-import { createMatch, getMatch, getAllMatches, isUserInActiveMatch } from "../engine/matchStore.js";
+import { createMatch, getMatch, getAllMatches, deleteMatch, isUserInActiveMatch } from "../engine/matchStore.js";
 
 const router = express.Router();
 
@@ -102,6 +102,32 @@ router.get("/:matchId", (req, res) => {
     return res.status(403).json({ error: "Forbidden" });
 
   res.json(state);
+});
+
+// CANCEL MATCHMAKING — removes user from any waiting match they joined
+router.delete("/matchmaking", (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const matches = getAllMatches();
+
+  for (const [matchId, state] of Object.entries(matches)) {
+    if (state.status !== "waiting") continue;
+
+    const player = state.players.find(p => p.userId === userId);
+    if (!player) continue;
+
+    player.userId = null;
+    player.connected = false;
+
+    if (!state.players.some(p => p.userId)) {
+      deleteMatch(matchId);
+    }
+
+    return res.json({ ok: true });
+  }
+
+  res.json({ ok: true });
 });
 
 router.post("/matchmaking", (req, res) => {

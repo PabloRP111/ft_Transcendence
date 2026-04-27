@@ -124,9 +124,17 @@ export function initSocket(io) {
       if (!state) return;
 
       const player = state.players.find(p => p.id === playerId);
-      if (!player)
-        return;
+      if (!player) return;
+
       player.connected = false;
+
+      if (state.status === "waiting") {
+        player.userId = null;
+        if (!state.players.some(p => p.userId)) {
+          deleteMatch(matchId);
+        }
+        return;
+      }
 
       if (state.status === "playing") {
         state.status = "paused";

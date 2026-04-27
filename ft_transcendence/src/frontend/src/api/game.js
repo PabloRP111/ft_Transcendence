@@ -54,3 +54,9 @@ export function findMatch() {
     method: "POST",
   });
 }
+
+export function cancelMatchmaking() {
+  return apiFetch("/pvp/matchmaking", {
+    method: "DELETE",
+  });
+}

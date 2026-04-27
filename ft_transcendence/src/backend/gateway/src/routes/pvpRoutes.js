@@ -53,4 +53,9 @@ router.post("/matchmaking", (req, res) => {
   return proxyRequest(req, res, "/matchmaking");
 });
 
+// CANCEL MATCHMAKING
+router.delete("/matchmaking", (req, res) => {
+  return proxyRequest(req, res, "/matchmaking");
+});
+
 export default router;
