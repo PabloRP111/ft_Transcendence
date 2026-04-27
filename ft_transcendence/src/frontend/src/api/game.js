@@ -43,17 +43,10 @@ export function joinPvpMatch(matchId) {
   });
 }
 
-export async function getPvpMatch(matchId) {
-  try {
-    return await apiFetch(`/pvp/${matchId}`, {
-      method: "GET",
-    });
-  } catch (err) {
-    if (err.message?.includes("404")) {
-      return null;
-    }
-    throw err;
-  }
+export function getPvpMatch(matchId) {
+  return apiFetch(`/pvp/${matchId}`, {
+    method: "GET",
+  });
 }
 
 export function findMatch() {
