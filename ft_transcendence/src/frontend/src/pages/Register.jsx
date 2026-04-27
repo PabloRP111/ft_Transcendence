@@ -65,7 +65,7 @@ export default function RegisterPage() {
       loginUser(loginData.accessToken);
       navigate("/");
     } catch (err) {
-      setMsg("Fetch failed: " + err.message);
+      setMsg("Network error. Try again.");
     }
   };
 

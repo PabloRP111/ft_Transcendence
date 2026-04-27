@@ -27,7 +27,10 @@ export async function apiFetch(endpoint, options = {}) {
   if (!res.ok) {
     // If the Gateway or any service returns 401, the access token is invalid/expired
     if (res.status === 401 && token)
+    {
       window.dispatchEvent(new CustomEvent("session-expired"));
+      return null;
+    }
 
     // Attempt to get a descriptive error message from the response body
     const errorText = await res.text().catch(() => "Unknown error");

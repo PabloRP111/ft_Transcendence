@@ -12,11 +12,11 @@ export async function register(data) {
     body: JSON.stringify(data),
   });
 
+  const responseData = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: "Registration failed" }));
-    throw new Error(errorData.error || "Registration failed");
+    return { error: responseData.error || "Registration failed" };
   }
-  return res.json();
+  return responseData;
 }
 
 /**
@@ -30,11 +30,11 @@ export async function login(data) {
     credentials: "include" // Important for receiving the Refresh Token cookie
   });
 
+  const responseData = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: "Login failed" }));
-    throw new Error(errorData.error || "Login failed");
+    return { error: responseData.error || "Login failed" };
   }
-  return res.json();
+  return responseData;
 }
 
 /**

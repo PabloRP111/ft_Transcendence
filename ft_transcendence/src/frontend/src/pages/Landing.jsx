@@ -73,6 +73,7 @@ export default function GridLanding() {
 	}, []);
 
 	useEffect(() => {
+		if (loading || !isAuthenticated) return;
 		if (isAuthenticated) {
 			apiFetch("/ranking")
 				.then((data) => {
@@ -83,14 +84,13 @@ export default function GridLanding() {
 					setRankingLoading(false);
 				})
 				.catch((err) => {
-					console.error("[ranking] error:", err);
 					setRankingLoading(false);
 				});
 		}
 	}, [isAuthenticated]);
 
 	useEffect(() => {
-		if (!isAuthenticated) {
+		if (loading || !isAuthenticated) {
 			setCurrentUserId(null);
 			setFriendIds([]);
 			return;

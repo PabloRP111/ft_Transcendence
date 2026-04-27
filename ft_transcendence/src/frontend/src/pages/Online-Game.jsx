@@ -95,7 +95,7 @@ export default function TronPvpArena() {
 
   // MATCHMAKING
   useEffect(() => {
-    if (matchId) return;
+    if (matchId !== null) return;
 
     async function initMatchmaking() {
       try {
