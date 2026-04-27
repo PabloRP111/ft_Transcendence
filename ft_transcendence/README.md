@@ -301,11 +301,14 @@ Total = (2 x number_of_major_modules) + (1 x number_of_minor_modules)
 | --- | --- | --- | --- | --- | --- |
 | Web framework (frontend + backend) | Major | 2 | Needed for maintainable full-stack architecture. | React/Vite frontend with Express-based backend services. | prosas-p, aamoros-, mzuloaga, femoreno, jotrujil |
 | Real-time features (WebSockets) | Major | 2 | Required for chat and live gameplay updates. | Socket.IO namespaces for gateway/chat/game real-time flows. | prosas-p, mzuloaga, jotrujil |
-| Multiplayer game | Major | 2 | Core product objective of ft_transcendence. | Tron-style game with AI and remote PvP match flow. | prosas-p, aamoros- |
+| Web-based game | Major | 2 | Core product deliverable: a complete browser-based multiplayer game. | Tron-style game with clear rules, win/loss conditions, and live 2D gameplay. | prosas-p, aamoros- |
+| Remote players | Major | 2 | Enable two players on separate computers to play the same game in real-time. | PvP matchmaking over WebSockets with live match state synchronization between clients. | prosas-p, aamoros- |
+| AI opponent | Major | 2 | Provide a solo game mode with a challenging computer-controlled opponent. | AI player implemented in the game engine that simulates human-like behavior and adapts to the match. | prosas-p, aamoros- |
 | User management/authentication | Major | 2 | Mandatory identity and profile management. | Register/login, profile editing, avatar support, social features. | prosas-p, femoreno |
 | DevOps microservices | Major | 2 | Separation of concerns and scalable service boundaries. | Gateway + users + chat + game behind Nginx in Docker Compose. | prosas-p, mzuloaga, aamoros- |
+| User interaction | Major | 2 | Core social experience: chat, profiles, and friend relationships between users. | Real-time DM chat via Socket.IO, profile pages with game stats, and friends system with add/remove and friends list. | mzuloaga, femoreno, jotrujil |
 
-Confirmed major points so far: 10
+Confirmed major points so far: 16
 
 ### Minor / Modules of Choice
 
@@ -314,14 +317,15 @@ Use this table to document the final minor modules selected by your team at subm
 | Module | Type | Activity Points | Why This Module Was Chosen | How It Was Implemented | Team Member(s) | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | Advanced chat features | Minor | 1 | To improve social interaction depth beyond basic messaging and connect chat with gameplay actions. | Blocking, game invites, persistent history, channel workflows. | mzuloaga, jotrujil | Implemented |
-| Advanced search/filtering | Minor | 1 | To make user/channel discovery faster and improve navigation across social and competitive features. | User search and public channel search endpoints/UI. | jotrujil, femoreno | Implemented |
+| Advanced search with filters, sorting, and pagination | Minor | 1 | To provide a richer discovery experience for users and channels beyond basic keyword matching. | Search endpoints support query filters, sort parameters, and paginated responses; frontend renders results with controls. | jotrujil, femoreno | Implemented |
 | File upload management | Minor | 1 | To support profile personalization and complete user account management requirements. | Avatar upload with backend handling and profile integration. | femoreno, prosas-p | Implemented |
-| UI/UX and responsive refinement | Minor | 1 | To improve usability, consistency, and accessibility across key views. | Shared UI components, profile/landing polish, and responsive layout adjustments. | aamoros-, femoreno | Partially implemented |
+| Game statistics and match history | Minor | 1 | To surface competitive progression and give players a record of their performance. | Wins, losses, score, and rank tracked in the DB; leaderboard and per-user stats displayed in the profile and landing pages. | jotrujil, femoreno | Implemented |
+| UI/UX and responsive refinement | Modules of choice (Minor) | 1 | To improve usability, consistency, and accessibility across key views as a custom module extending the product quality. | Shared UI components, profile/landing polish, and responsive layout adjustments. | aamoros-, femoreno | Partially implemented |
 
 Total points after minors:
 
 ```text
-10 + 3 confirmed minors = 13 (or 14 if the UI/UX minor is fully validated)
+16 + 4 confirmed minors = 20 (or 21 if the UI/UX minor is fully validated)
 ```
 
 ## Individual Contributions
