@@ -5,6 +5,7 @@ import { LogIn, UserPlus, LogOut } from "lucide-react";
 import { login, logout } from "../api/auth.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import LightCycles from "../components/LightCycles";
+import Navbar from "../components/Navbar";
 import { validateEmail, validatePassword } from "../utils/security.js";
 
 const containerVariants = {
@@ -65,6 +66,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-voidBlack font-mono text-[color:var(--tron-text)]">
+      <Navbar />
+
       <div className="pointer-events-none absolute inset-0">
         <div className="grid-atmosphere" />
         <div className="grid-floor" />

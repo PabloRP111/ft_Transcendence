@@ -30,6 +30,7 @@ export function useTronPvP(matchId) {
         const res = await joinPvpMatch(matchId);
         if (!mounted) return;
 
+        statusRef.current = res.ready ? "playing" : "waiting";
         setPlayerId(res.playerId);
         localStorage.setItem("activeMatch", matchId);
         window.dispatchEvent(
@@ -112,7 +113,7 @@ export function useTronPvP(matchId) {
     return () => {
       mounted = false;
 
-      if (!statusRef.current || statusRef.current === "waiting") {
+      if (statusRef.current === "waiting") {
         localStorage.removeItem("activeMatch");
         window.dispatchEvent(new CustomEvent("active-match-changed", { detail: null }));
         cancelMatchmaking().catch(() => {});

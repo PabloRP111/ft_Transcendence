@@ -23,6 +23,9 @@ export default function Navbar() {
   const { isAuthenticated, logoutUser, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const hideGuestAuthButtons =
+    !isAuthenticated &&
+    (location.pathname === "/login" || location.pathname === "/register");
 
   const handleLogout = async () => {
     await logoutUser();
@@ -69,7 +72,7 @@ export default function Navbar() {
                 Logout
               </button>
             </>
-          ) : (
+          ) : hideGuestAuthButtons ? null : (
             <>
               <Button
                 to="/login"
